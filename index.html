@@ -29,10 +29,8 @@
     .totals-row.grand-total { font-weight: bold; color: var(--accent); border-top: 2px solid #ddd; padding-top: 8px; font-size: 16px; }
     .footer-ctrls { margin-top: 20px; padding-top: 20px; border-top: 2px solid #f5f6fa; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Contenedor invisible para armar la factura física */
     #printArea { display: none; }
 
-    /* ESTILOS DE IMPRESIÓN PROFESIONAL */
     @media print {
       body { background: white; padding: 0; color: #000; }
       .container { box-shadow: none; padding: 0; max-width: 100%; }
@@ -179,12 +177,11 @@
 </div>
 
 <script>
-  // URL de tu implementación productiva (/exec)
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec"; 
   
   let dbInventario = {}, dbPrecios = {}, datosEmpresa = {};
   let modoEdicion = false;
-  let siguienteFacturaGlobal = "FC001"; // Control global del consecutivo automático
+  let siguienteFacturaGlobal = "FC001";
 
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fecha').valueAsDate = new Date();
@@ -198,25 +195,34 @@
         if(res.success){
           dbInventario = res.data.inventario;
           dbPrecios = res.data.precios;
-          datosEmpresa = res.data.empresa; // Guardamos la info de la pestaña MENU
-          siguienteFacturaGlobal = res.data.siguienteFactura; // Guardamos el consecutivo del Backend
+          datosEmpresa = res.data.empresa; 
+          siguienteFacturaGlobal = res.data.siguienteFactura; 
 
-          // Si no estamos en modo edición, asignamos el consecutivo calculado
           if (!modoEdicion) {
             document.getElementById('noFactura').value = siguienteFacturaGlobal;
             calcularIdUnico();
           }
           
+          // CORRECCIÓN DE DUPLICADOS: Extraemos nombres únicos desde dbInventario
+          const productosUnicos = [...new Set(Object.keys(dbInventario))];
+
           const selects = document.querySelectorAll('.item-desc');
           selects.forEach(select => {
-            Object.keys(dbPrecios).forEach(prod => {
-              let opt = document.createElement('option');
-              opt.value = prod; opt.textContent = prod;
-              select.appendChild(opt);
+            // Limpiamos opciones antiguas excepto la primera por defecto
+            select.innerHTML = '<option value="">-- Seleccione --</option>';
+            
+            productosUnicos.forEach(prod => {
+              if (prod && prod.trim() !== "") {
+                let opt = document.createElement('option');
+                opt.value = prod; 
+                opt.textContent = prod;
+                select.appendChild(opt);
+              }
             });
           });
 
           const pucSelect = document.getElementById('cuentaPuc');
+          pucSelect.innerHTML = '<option value="">-- Seleccione --</option>';
           res.data.puc.forEach(cod => {
             let opt = document.createElement('option');
             opt.value = cod; opt.textContent = cod;
@@ -337,6 +343,7 @@
     document.querySelectorAll('.item-row').forEach(fila => {
       factura.items.push({
         descripcion: fila.querySelector('.item-desc').value,
+        character: fila.querySelector('.item-desc').value,
         cantidad: parseFloat(fila.querySelector('.item-cant').value) || 0,
         valorUnitario: parseFloat(fila.querySelector('.item-vunit').value) || 0,
         subtotal: parseFloat(fila.querySelector('.item-sub').value) || 0,
@@ -362,8 +369,6 @@
       .then(() => {
         alert("Operación procesada con éxito.");
         document.getElementById('btnImprimirTop').style.display = 'inline-block';
-        
-        // Si acabamos de crear una factura nueva, recargamos el catálogo para actualizar el consecutivo en vivo
         if(!modoEdicion) {
           cargarDatosIniciales();
         }
@@ -382,7 +387,7 @@
           const f = res.data;
           
           document.getElementById('noFactura').value = f.noFactura;
-          document.getElementById('noFactura').readOnly = true; // Se mantiene bloqueado al visualizar antiguas
+          document.getElementById('noFactura').readOnly = true; 
           document.getElementById('fecha').value = f.fecha.split('T')[0];
           document.getElementById('idUnico').value = f.idUnico;
           document.getElementById('nit').value = f.nit;
@@ -404,7 +409,6 @@
               fila.querySelector('.item-pipo').value = it.porcIpo;
               fila.querySelector('.item-vipo').value = it.ipo;
             } else {
-              // Limpiar filas sobrantes al buscar otra factura diferente
               fila.querySelector('.item-desc').value = "";
               fila.querySelector('.item-cant').value = 0;
               fila.querySelector('.item-vunit').value = 0;
@@ -519,7 +523,6 @@
     fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'eliminarFactura', noFactura: noFact }) })
       .then(() => { 
         alert("Registro eliminado."); 
-        // Forzamos recarga de consecutivos antes de limpiar
         modoEdicion = false;
         cargarDatosIniciales();
         limpiarFormulario(); 
@@ -530,7 +533,6 @@
     modoEdicion = false;
     document.getElementById('invoiceForm').reset();
     
-    // El campo se mantiene bloqueado para proteger la numeración consecutiva
     document.getElementById('noFactura').readOnly = true; 
     document.getElementById('noFactura').value = siguienteFacturaGlobal;
     
@@ -546,7 +548,7 @@
     });
     
     alternarCredito();
-    calcularIdUnico(); // Recalcula el ID único inicial vacío con el consecutivo reasignado
+    calcularIdUnico(); 
     calcularTotales();
   }
 </script>
