@@ -9,9 +9,9 @@
     body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
     .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
     h2 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-top: 0; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .form-group { display: flex; flex-direction: column; }
-    label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; text-transform: uppercase; }
+    label { font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #555; text-transform: uppercase; }
     input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
     input:readonly { background-color: #e9ecef; color: #6c757d; }
     .search-panel { background: #e8f4f1; padding: 15px; border-radius: 6px; margin-bottom: 25px; display: flex; gap: 10px; align-items: flex-end; }
@@ -22,11 +22,28 @@
     .btn-primary { background: var(--primary); color: white; }
     .btn-accent { background: var(--accent); color: white; }
     .btn-danger { background: #e74c3c; color: white; }
+    .btn-print { background: #f39c12; color: white; }
     .btn:hover { opacity: 0.9; }
     .totals-box { width: 350px; margin-left: auto; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #eee; }
     .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
     .totals-row.grand-total { font-weight: bold; color: var(--accent); border-top: 2px solid #ddd; padding-top: 8px; font-size: 16px; }
     .footer-ctrls { margin-top: 20px; padding-top: 20px; border-top: 2px solid #f5f6fa; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Contenedor invisible para armar la factura física */
+    #printArea { display: none; }
+
+    /* ESTILOS DE IMPRESIÓN PROFESIONAL */
+    @media print {
+      body { background: white; padding: 0; color: #000; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      #invoiceForm, .search-panel, h2, .footer-ctrls { display: none !important; }
+      #printArea { display: block !important; font-family: 'Courier New', monospace; font-size: 14px; }
+      .print-header { display: flex; justify-content: space-between; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; }
+      .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+      .print-table th { background: #eee !important; color: #000; font-weight: bold; border-bottom: 1px solid #000; }
+      .print-table td { padding: 6px; border-bottom: 1px dotted #ccc; }
+      .print-totals { width: 300px; margin-left: auto; margin-top: 15px; line-height: 1.6; }
+    }
   </style>
 </head>
 <body>
@@ -36,11 +53,12 @@
   
   <div class="search-panel">
     <div class="form-group" style="flex: 1;">
-      <label>Buscar Factura (Por Número)</label>
-      <input type="text" id="buscarNoFactura" placeholder="Ej: 1054">
+      <label>Buscar Factura Existente (Por Número)</label>
+      <input type="text" id="buscarNoFactura" placeholder="Ej: FC01">
     </div>
     <button class="btn btn-primary" onclick="buscarFactura()">Buscar</button>
-    <button class="btn btn-danger" id="btnEliminar" onclick="eliminarFactura()" style="display:none;">Eliminar Factura</button>
+    <button class="btn class-print btn-print" id="btnImprimirTop" onclick="imprimirFacturaForm()" style="display:none;">🖨️ Imprimir Factura</button>
+    <button class="btn btn-danger" id="btnEliminar" onclick="eliminarFactura()" style="display:none;">Eliminar</button>
   </div>
 
   <form id="invoiceForm" onsubmit="event.preventDefault();">
@@ -61,7 +79,7 @@
 
     <div class="grid-3">
       <div class="form-group">
-        <label>NIT Cliente (Tabula o sal para buscar)</label>
+        <label>NIT Cliente</label>
         <input type="text" id="nit" required onblur="buscarClientePorNit()">
       </div>
       <div class="form-group">
@@ -71,6 +89,14 @@
       <div class="form-group">
         <label>Dirección</label>
         <input type="text" id="direccion" required>
+      </div>
+      <div class="form-group">
+        <label>Teléfono Cliente</label>
+        <input type="text" id="telefono">
+      </div>
+      <div class="form-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="correo">
       </div>
     </div>
 
@@ -138,23 +164,25 @@
         <div class="totals-row"><label>Descuento</label><input type="number" id="descuento" value="0" oninput="calcularTotales()" style="width:120px; text-align:right;"></div>
         <div class="totals-row"><span>Total IVA:</span><span id="lblTotalIva">$0.00</span></div>
         <div class="totals-row"><span>Total IPOCONSUMO:</span><span id="lblTotalIpo">$0.00</span></div>
-        <div class="totals-row credito-field" style="display:none;"><span>Valor Interés Crédito:</span><span id="lblValorInteres">$0.00</span></div>
+        <div class="totals-row credito-field" style="display:none;"><span>Valor Interés:</span><span id="lblValorInteres">$0.00</span></div>
         <div class="totals-row grand-total"><span>TOTAL FACTURA:</span><span id="lblTotal">$0.00</span></div>
       </div>
     </div>
 
     <div class="footer-ctrls">
-      <button type="button" class="btn" onclick="limpiarFormulario()">Limpiar Todo</button>
+      <button type="button" class="btn" onclick="limpiarFormulario()">Limpiar Formulario</button>
       <button type="button" id="btnGuardar" class="btn btn-accent" onclick="procesarFormulario()">Registrar Factura</button>
     </div>
   </form>
+
+  <div id="printArea"></div>
 </div>
 
 <script>
-  // URL de tu Web App desplegada en Google Apps Script
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
+  // Cambia esta URL por la de tu implementación productiva (/exec)
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwPqC896Zf3vR7X08O_Iu-M5I9Z8uA_ZJzJk2E7F3v_M2E7F3v_/exec"; 
   
-  let dbInventario = {}, dbPrecios = {};
+  let dbInventario = {}, dbPrecios = {}, datosEmpresa = {};
   let modoEdicion = false;
 
   window.addEventListener('DOMContentLoaded', () => {
@@ -169,8 +197,8 @@
         if(res.success){
           dbInventario = res.data.inventario;
           dbPrecios = res.data.precios;
+          datosEmpresa = res.data.empresa; // Guardamos la info de la pestaña MENU
           
-          // Llenar selects de productos
           const selects = document.querySelectorAll('.item-desc');
           selects.forEach(select => {
             Object.keys(dbPrecios).forEach(prod => {
@@ -180,7 +208,6 @@
             });
           });
 
-          // Llenar select PUC
           const pucSelect = document.getElementById('cuentaPuc');
           res.data.puc.forEach(cod => {
             let opt = document.createElement('option');
@@ -188,7 +215,7 @@
             pucSelect.appendChild(opt);
           });
         }
-      }).catch(err => alert("Error cargando catálogos de Google Sheets: " + err));
+      }).catch(err => alert("Error conectando con Google Sheets: " + err));
   }
 
   function calcularIdUnico() {
@@ -208,6 +235,8 @@
         if(res.success && res.data){
           document.getElementById('razonSocial').value = res.data.razonSocial;
           document.getElementById('direccion').value = res.data.direccion;
+          document.getElementById('telefono').value = res.data.telefono || '';
+          document.getElementById('correo').value = res.data.correo || '';
         }
       });
   }
@@ -225,11 +254,10 @@
     const cant = parseFloat(fila.querySelector('.item-cant').value) || 0;
     const vunit = parseFloat(fila.querySelector('.item-vunit').value) || 0;
     
-    // Validar Saldo Inventario Disponible
     if(desc && cant > 0 && !modoEdicion){
       const disponible = dbInventario[desc] || 0;
       if(cant > disponible){
-        alert(`¡Alerta! No hay inventario suficiente para "${desc}". Saldo disponible: ${disponible}`);
+        alert(`Stock insuficiente para "${desc}". Disponible: ${disponible}`);
         fila.querySelector('.item-cant').value = 0;
         return calcularFila(index);
       }
@@ -239,12 +267,10 @@
     fila.querySelector('.item-sub').value = sub.toFixed(2);
     
     const pIva = parseFloat(fila.querySelector('.item-piva').value) || 0;
-    const vIva = sub * (pIva / 100);
-    fila.querySelector('.item-viva').value = vIva.toFixed(2);
+    fila.querySelector('.item-viva').value = (sub * (pIva / 100)).toFixed(2);
     
     const pIpo = parseFloat(fila.querySelector('.item-pipo').value) || 0;
-    const vIpo = sub * (pIpo / 100);
-    fila.querySelector('.item-vipo').value = vIpo.toFixed(2);
+    fila.querySelector('.item-vipo').value = (sub * (pIpo / 100)).toFixed(2);
 
     calcularTotales();
   }
@@ -257,7 +283,6 @@
 
   function calcularTotales() {
     let subtotalG = 0, totalIva = 0, totalIpo = 0;
-    
     document.querySelectorAll('.item-row').forEach(fila => {
       subtotalG += parseFloat(fila.querySelector('.item-sub').value) || 0;
       totalIva += parseFloat(fila.querySelector('.item-viva').value) || 0;
@@ -267,7 +292,6 @@
     const otros = parseFloat(document.getElementById('otrosCobros').value) || 0;
     const desc = parseFloat(document.getElementById('descuento').value) || 0;
     const pInteres = parseFloat(document.getElementById('porcInteres').value) || 0;
-    
     const vInteres = subtotalG * (pInteres / 100);
     
     document.getElementById('lblSubtotal').textContent = `$${subtotalG.toFixed(2)}`;
@@ -287,6 +311,8 @@
       razonSocial: document.getElementById('razonSocial').value,
       nit: document.getElementById('nit').value,
       direccion: document.getElementById('direccion').value,
+      telefono: document.getElementById('telefono').value,
+      correo: document.getElementById('correo').value,
       items: [],
       otrosCobros: parseFloat(document.getElementById('otrosCobros').value) || 0,
       descuento: parseFloat(document.getElementById('descuento').value) || 0,
@@ -316,29 +342,24 @@
   }
 
   function procesarFormulario() {
-    const payload = {
-      action: modoEdicion ? 'editarFactura' : 'crearFactura',
-      data: extraerDatosFormulario()
-    };
-
-    if(!payload.data.noFactura || !payload.data.nit || !payload.data.cuentaPuc){
-      alert("Por favor rellene los campos obligatorios (Número Factura, NIT, PUC)");
+    const fData = extraerDatosFormulario();
+    if(!fData.noFactura || !fData.nit || !fData.cuentaPuc){
+      alert("Por favor diligencie: Número Factura, NIT y Cuenta PUC.");
       return;
     }
 
-    fetch(WEB_APP_URL, {
-      method: 'POST',
-      mode: 'no-cors', // Permite saltarse bloqueos CORS de redirección típicos de Google Apps Script
-      body: JSON.stringify(payload)
-    }).then(() => {
-      alert("Operación procesada. Verifique los registros en la Hoja de Cálculo.");
-      limpiarFormulario();
-    }).catch(err => alert("Error procesando: " + err));
+    const payload = { action: modoEdicion ? 'editarFactura' : 'crearFactura', data: fData };
+
+    fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+      .then(() => {
+        alert("Operación procesada con éxito.");
+        document.getElementById('btnImprimirTop').style.display = 'inline-block';
+      }).catch(err => alert("Error enviando datos: " + err));
   }
 
   function buscarFactura() {
     const noFact = document.getElementById('buscarNoFactura').value;
-    if(!noFact) return alert("Inserte un número de factura para buscar.");
+    if(!noFact) return alert("Inserte un número de factura.");
 
     fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}`)
       .then(res => res.json())
@@ -354,6 +375,8 @@
           document.getElementById('nit').value = f.nit;
           document.getElementById('razonSocial').value = f.razonSocial;
           document.getElementById('direccion').value = f.direccion;
+          document.getElementById('telefono').value = f.telefono || '';
+          document.getElementById('correo').value = f.correo || '';
           
           for(let i=0; i<5; i++){
             const fila = document.querySelector(`.item-row[data-index="${i+1}"]`);
@@ -379,26 +402,102 @@
 
           alternarCredito();
           document.getElementById('btnEliminar').style.display = 'inline-block';
+          document.getElementById('btnImprimirTop').style.display = 'inline-block';
           document.getElementById('btnGuardar').textContent = "Actualizar Factura";
-          document.getElementById('btnGuardar').className = "btn btn-primary";
         } else {
-          alert("No se encontró ninguna factura con ese número.");
+          alert("Factura no encontrada.");
         }
       });
   }
 
+  function imprimirFacturaForm() {
+    const f = extraerDatosFormulario();
+    const printArea = document.getElementById('printArea');
+    
+    // Construir renglones de la tabla de artículos
+    let filasHtml = '';
+    let subtotalGeneralCalculado = 0;
+    f.items.forEach(it => {
+      if(it.descripcion && it.cantidad > 0){
+        subtotalGeneralCalculado += it.subtotal;
+        filasHtml += `
+          <tr>
+            <td>${it.descripcion}</td>
+            <td style="text-align: center;">${it.cantidad}</td>
+            <td style="text-align: right;">$${it.valorUnitario.toFixed(2)}</td>
+            <td style="text-align: right;">$${it.subtotal.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    });
+
+    // Plantilla HTML de impresión estructurada con datos de la pestaña MENU
+    printArea.innerHTML = `
+      <div class="print-header">
+        <div>
+          <strong style="font-size: 18px;">${datosEmpresa.nombre || 'EMPRESA'}</strong><br>
+          NIT: ${datosEmpresa.nit || ''}<br>
+          Dirección: ${datosEmpresa.direccion || ''}<br>
+          Tel: ${datosEmpresa.telefono1 || ''} ${datosEmpresa.telefono2 || ''}<br>
+          Email: ${datosEmpresa.correo || ''}
+        </div>
+        <div style="text-align: right;">
+          <strong style="font-size: 16px; color: #000;">FACTURA DE VENTA</strong><br>
+          <span style="font-size: 18px; font-weight: bold;">No. ${f.noFactura}</span><br>
+          Fecha: ${f.fecha}<br>
+          Condición: ${f.credito === 'SI' ? `CRÉDITO (${f.diasCredito} Días)` : 'CONTADO'}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px; border: 1px solid #000; padding: 10px;">
+        <strong>ADQUIRIENTE (CLIENTE)</strong><br>
+        RAZÓN SOCIAL: ${f.razonSocial}<br>
+        NIT/CÉDULA: ${f.nit}<br>
+        DIRECCIÓN: ${f.direccion}<br>
+        TELÉFONO: ${f.telefono || 'N/A'} | EMAIL: ${f.correo || 'N/A'}
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Descripción del Concepto</th>
+            <th style="text-align: center; width: 10%;">Cant.</th>
+            <th style="text-align: right; width: 15%;">V. Unitario</th>
+            <th style="text-align: right; width: 15%;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasHtml}
+        </tbody>
+      </table>
+
+      <div class="print-totals">
+        <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>$${subtotalGeneralCalculado.toFixed(2)}</span></div>
+        ${f.otrosCobros > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Otros Cobros:</span><span>$${f.otrosCobros.toFixed(2)}</span></div>` : ''}
+        ${f.descuento > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Descuento:</span><span>-$${f.descuento.toFixed(2)}</span></div>` : ''}
+        ${f.totalIva > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Total IVA:</span><span>$${f.totalIva.toFixed(2)}</span></div>` : ''}
+        ${f.totalIpoconsumo > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Total Impoconsumo:</span><span>$${f.totalIpoconsumo.toFixed(2)}</span></div>` : ''}
+        ${f.valorInteres > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Intereses Financiación:</span><span>$${f.valorInteres.toFixed(2)}</span></div>` : ''}
+        <div style="display:flex; justify-content:space-between; font-weight:bold; border-top: 1px solid #000; padding-top:4px; font-size:15px;">
+          <span>TOTAL NETO:</span><span>$${f.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 50px; text-align: center; font-size: 11px;">
+        <p>Cuenta Contable PUC afectada: ${f.cuentaPuc}</p>
+        <p>Factura generada desde el Sistema Integrado Contable en GitHub.</p>
+      </div>
+    `;
+
+    // Ejecuta el comando de impresión nativo del sistema operativo
+    window.print();
+  }
+
   function eliminarFactura() {
     const noFact = document.getElementById('noFactura').value;
-    if(!confirm(`¿Está seguro de que desea eliminar permanentemente la factura No. ${noFact}?`)) return;
-
-    fetch(WEB_APP_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify({ action: 'eliminarFactura', noFactura: noFact })
-    }).then(() => {
-      alert("Petición de eliminación enviada.");
-      limpiarFormulario();
-    });
+    if(!confirm(`¿Desea eliminar la factura No. ${noFact}?`)) return;
+    fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'eliminarFactura', noFactura: noFact }) })
+      .then(() => { alert("Registro eliminado."); limpiarFormulario(); });
   }
 
   function limpiarFormulario() {
@@ -407,17 +506,15 @@
     document.getElementById('noFactura').readOnly = false;
     document.getElementById('fecha').valueAsDate = new Date();
     document.getElementById('btnEliminar').style.display = 'none';
+    document.getElementById('btnImprimirTop').style.display = 'none';
     document.getElementById('btnGuardar').textContent = "Registrar Factura";
-    document.getElementById('btnGuardar').className = "btn btn-accent";
-    
-    document.querySelectorAll('.item-row').forEach(fila => {
-      fila.querySelector('.item-sub').value = 0;
-      fila.querySelector('.item-viva').value = 0;
-      fila.querySelector('.item-vipo').value = 0;
+    document.querySelectorAll('.item-row').forEach(f => {
+      f.querySelector('.item-sub').value = 0;
+      f.querySelector('.item-viva').value = 0;
+      f.querySelector('.item-vipo').value = 0;
     });
     alternarCredito();
   }
 </script>
-  
 </body>
 </html>
