@@ -6,8 +6,8 @@
   <title>Módulo de Facturación Contable - FACTURACION</title>
   <style>
     :root { --primary: #2c3e50; --accent: #16a085; --bg: #f5f6fa; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+    .container { width: 100%; max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box; }
     h2 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-top: 0; }
     .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .form-group { display: flex; flex-direction: column; }
@@ -25,17 +25,38 @@
     .btn-print { background: #f39c12; color: white; }
     .btn:hover { opacity: 0.9; }
     .totals-box { width: 350px; margin-left: auto; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #eee; }
-    .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+    .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; align-items: center; }
     .totals-row.grand-total { font-weight: bold; color: var(--accent); border-top: 2px solid #ddd; padding-top: 8px; font-size: 16px; }
     .footer-ctrls { margin-top: 20px; padding-top: 20px; border-top: 2px solid #f5f6fa; display: flex; justify-content: space-between; align-items: center; }
 
     #printArea { display: none; }
 
+    /* === ESTILOS PARA EL PIE DE PÁGINA CENTRADO DE SURTECOL === */
+    .surtecol-footer {
+        width: 100%;
+        max-width: 1200px;
+        text-align: center;
+        margin-top: 30px;
+        padding: 10px 0;
+        box-sizing: border-box;
+    }
+    .surtecol-footer p {
+        margin: 5px 0;
+        color: #000000;
+    }
+    .surtecol-logo-container {
+        margin-top: 15px;
+    }
+    .surtecol-logo-container img {
+        width: 80px;
+        height: auto;
+        display: inline-block;
+    }
+
     @media print {
       body { background: white; padding: 0; color: #000; }
-      .container { box-shadow: none; padding: 0; max-width: 100%; }
-      #invoiceForm, .search-panel, h2, .footer-ctrls { display: none !important; }
-      #printArea { display: block !important; font-family: 'Courier New', monospace; font-size: 14px; }
+      .container, .surtecol-footer { display: none !important; }
+      #printArea { display: block !important; font-family: 'Courier New', monospace; font-size: 14px; width: 100%; }
       .print-header { display: flex; justify-content: space-between; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; }
       .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
       .print-table th { background: #eee !important; color: #000; font-weight: bold; border-bottom: 1px solid #000; }
@@ -55,7 +76,7 @@
       <input type="text" id="buscarNoFactura" placeholder="Ej: FC01">
     </div>
     <button class="btn btn-primary" onclick="buscarFactura()">Buscar</button>
-    <button class="btn class-print btn-print" id="btnImprimirTop" onclick="imprimirFacturaForm()" style="display:none;">🖨️ Imprimir Factura</button>
+    <button class="btn btn-print" id="btnImprimirTop" onclick="imprimirFacturaForm()" style="display:none;">🖨️ Imprimir Factura</button>
     <button class="btn btn-danger" id="btnEliminar" onclick="eliminarFactura()" style="display:none;">Eliminar</button>
   </div>
 
@@ -172,9 +193,21 @@
       <button type="button" id="btnGuardar" class="btn btn-accent" onclick="procesarFormulario()">Registrar Factura</button>
     </div>
   </form>
-
-  <div id="printArea"></div>
 </div>
+
+<div class="surtecol-footer">
+    <p style="font-size: 16px;">
+        Este es un desarrollo creado por <strong style="text-decoration: underline;">Surtecol</strong>
+    </p>
+    <p style="font-size: 15px; font-weight: bold;">
+        Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia
+    </p>
+    <div class="surtecol-logo-container">
+        <img src="logo1.png?v=2" alt="Logo Surtecol" onerror="this.src='logo1.PNG?v=2'" />
+    </div>
+</div>
+
+<div id="printArea"></div>
 
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec"; 
@@ -203,14 +236,11 @@
             calcularIdUnico();
           }
           
-          // CORRECCIÓN DE DUPLICADOS: Extraemos nombres únicos desde dbInventario
           const productosUnicos = [...new Set(Object.keys(dbInventario))];
 
           const selects = document.querySelectorAll('.item-desc');
           selects.forEach(select => {
-            // Limpiamos opciones antiguas excepto la primera por defecto
             select.innerHTML = '<option value="">-- Seleccione --</option>';
-            
             productosUnicos.forEach(prod => {
               if (prod && prod.trim() !== "") {
                 let opt = document.createElement('option');
