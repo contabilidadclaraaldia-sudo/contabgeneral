@@ -173,38 +173,37 @@
   });
 
   function cargarDatosConfiguracion() {
-  // Una petición directa y sin cabeceras restrictivas permite que Google gestione la redirección sin romper la seguridad del navegador
-  fetch(WEB_APP_URL)
-  .then(res => {
-    if (!res.ok) throw new Error("Error en la respuesta del servidor");
-    return res.json();
-  })
-  .then(data => {
-    const selectPuc = document.getElementById('cuentaPuc');
-    selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
-    
-    if (data.puc && data.puc.length > 0) {
-      data.puc.forEach(cod => {
-        let opt = document.createElement('option');
-        opt.value = cod; 
-        opt.textContent = cod;
-        selectPuc.appendChild(opt);
-      });
-    }
-    
-    databaseProductos = data.productos || [];
-    if (typeof actualizarSelectsProductos === "function") {
-      actualizarSelectsProductos();
-    }
-  })
-  .catch(err => {
-    console.error("Error crítico de comunicación con el Script:", err);
-    const selectPuc = document.getElementById('cuentaPuc');
-    if(selectPuc) {
-      selectPuc.innerHTML = '<option value="">Error de enlace con Google Script</option>';
-    }
-  });
-}
+    fetch(WEB_APP_URL)
+    .then(res => {
+      if (!res.ok) throw new Error("Error en la respuesta del servidor");
+      return res.json();
+    })
+    .then(data => {
+      const selectPuc = document.getElementById('cuentaPuc');
+      selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
+      
+      if (data.puc && data.puc.length > 0) {
+        data.puc.forEach(cod => {
+          let opt = document.createElement('option');
+          opt.value = cod; 
+          opt.textContent = cod;
+          selectPuc.appendChild(opt);
+        });
+      }
+      
+      databaseProductos = data.productos || [];
+      if (typeof actualizarSelectsProductos === "function") {
+        actualizarSelectsProductos();
+      }
+    })
+    .catch(err => {
+      console.error("Error crítico de comunicación con el Script:", err);
+      const selectPuc = document.getElementById('cuentaPuc');
+      if(selectPuc) {
+        selectPuc.innerHTML = '<option value="">Error de enlace con Google Script</option>';
+      }
+    });
+  }
 
   function actualizarSelectsProductos() {
     document.querySelectorAll('.select-producto').forEach(select => {
@@ -337,7 +336,6 @@
       totalIpoconsumo += subtotalItem * (pIpoco / 100);
     });
 
-    // CORRECCIÓN MATEMÁTICA: Ahora se suma el valor extra ingresado
     const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
     const totalGeneral = subtotalGeneral + totalIva + totalIpoconsumo + otrosDescuentos;
 
@@ -353,16 +351,13 @@
 
     fetch(WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accion: "ELIMINAR", noFactura: noFactura })
     })
-    .then(res => res.json())
-    .then(res => {
-      alert(res.message);
+    .then(() => {
+      alert("Comprobante eliminado con éxito del sistema.");
       limpiarFormulario();
     }).catch(() => {
-      alert("Cambios guardados en base de datos.");
-      limpiarFormulario();
+      alert("Error procesando la eliminación.");
     });
   }
 
@@ -432,23 +427,19 @@
     payload.ivaGeneral = totalIvaFactura;
     payload.porcentajeIpoconsumoGeneral = payload.items[0] ? parseFloat(document.querySelectorAll('#bodyItems tr')[0].querySelector('.item-pipoco').value) || 0 : 0;
     payload.ipoconsumoGeneral = totalIpoconsumoFactura;
-    
-    // CORRECCIÓN MATEMÁTICA BACKEND PAYLOAD: Suma en lugar de resta
     payload.totalGeneral = (totalSubtotalFactura + totalIvaFactura + totalIpoconsumoFactura) + payload.otrosDescuentos;
 
     fetch(WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
-    .then(res => {
-      alert(res.message);
-      limpiarFormulario();
-    })
-    .catch(() => {
+    .then(() => {
       alert(modoActual === "EDITAR" ? "Factura modificada con éxito." : "Factura guardada correctamente en el libro.");
       limpiarFormulario();
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Fallo en la comunicación.");
     })
     .finally(() => {
       btn.disabled = false;
