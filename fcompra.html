@@ -173,41 +173,38 @@
   });
 
   function cargarDatosConfiguracion() {
-    // Se añade el parámetro de redirección forzada de Google para evitar bloqueos cross-origin primarios
-    fetch(WEB_APP_URL + "?nocache=" + new Date().getTime(), {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-    .then(res => {
-      if (!res.ok) throw new Error("Respuesta de red incorrecta");
-      return res.json();
-    })
-    .then(data => {
-      const selectPuc = document.getElementById('cuentaPuc');
-      selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
-      
-      if (data.puc && data.puc.length > 0) {
-        data.puc.forEach(cod => {
-          let opt = document.createElement('option');
-          opt.value = cod; opt.textContent = cod;
-          selectPuc.appendChild(opt);
-        });
-      } else {
-        selectPuc.innerHTML = '<option value="">No se encontraron cuentas PUC</option>';
-      }
-      
-      databaseProductos = data.productos || [];
+  // Una petición directa y sin cabeceras restrictivas permite que Google gestione la redirección sin romper la seguridad del navegador
+  fetch(WEB_APP_URL)
+  .then(res => {
+    if (!res.ok) throw new Error("Error en la respuesta del servidor");
+    return res.json();
+  })
+  .then(data => {
+    const selectPuc = document.getElementById('cuentaPuc');
+    selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
+    
+    if (data.puc && data.puc.length > 0) {
+      data.puc.forEach(cod => {
+        let opt = document.createElement('option');
+        opt.value = cod; 
+        opt.textContent = cod;
+        selectPuc.appendChild(opt);
+      });
+    }
+    
+    databaseProductos = data.productos || [];
+    if (typeof actualizarSelectsProductos === "function") {
       actualizarSelectsProductos();
-    })
-    .catch(err => {
-      console.error("Error cargando configuración inicial: ", err);
-      const selectPuc = document.getElementById('cuentaPuc');
-      selectPuc.innerHTML = '<option value="">Error al conectar con el servidor</option>';
-      alert("Atención: Hubo un problema al leer los datos de Cuentas y Productos. Verifique si la aplicación de Google Apps Script está correctamente publicada para 'Cualquier persona'.");
-    });
-  }
+    }
+  })
+  .catch(err => {
+    console.error("Error crítico de comunicación con el Script:", err);
+    const selectPuc = document.getElementById('cuentaPuc');
+    if(selectPuc) {
+      selectPuc.innerHTML = '<option value="">Error de enlace con Google Script</option>';
+    }
+  });
+}
 
   function actualizarSelectsProductos() {
     document.querySelectorAll('.select-producto').forEach(select => {
