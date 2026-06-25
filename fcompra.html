@@ -173,38 +173,30 @@
   });
 
   function cargarDatosConfiguracion() {
-    fetch(WEB_APP_URL)
-    .then(res => {
-      if (!res.ok) throw new Error("Error en la respuesta del servidor");
-      return res.json();
-    })
-    .then(data => {
-      const selectPuc = document.getElementById('cuentaPuc');
-      selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
-      
-      if (data.puc && data.puc.length > 0) {
-        data.puc.forEach(cod => {
-          let opt = document.createElement('option');
-          opt.value = cod; 
-          opt.textContent = cod;
-          selectPuc.appendChild(opt);
-        });
-      }
-      
-      databaseProductos = data.productos || [];
-      if (typeof actualizarSelectsProductos === "function") {
-        actualizarSelectsProductos();
-      }
-    })
-    .catch(err => {
-      console.error("Error crítico de comunicación con el Script:", err);
-      const selectPuc = document.getElementById('cuentaPuc');
-      if(selectPuc) {
-        selectPuc.innerHTML = '<option value="">Error de enlace con Google Script</option>';
-      }
-    });
-  }
+  const urlUrlScript = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
 
+  fetch(urlUrlScript, {
+    method: 'GET', // o 'POST' según cómo lo tengas configurado
+    redirect: 'follow' // <- ESTA LÍNEA ES VITAL para evitar el bloqueo de CORS en redirecciones de Google
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Error en la red al intentar conectar con el Script');
+    }
+    return response.json();
+  })
+  .then(objetoScript => {
+    // Aquí procesas los catálogos recibidos (Cuentas PUC, Productos, etc.)
+    console.log("Datos cargados correctamente:", objetoScript);
+    
+    // Ejemplo de mapeo si tu script retorna la estructura del paso 1:
+    // si (objetoScript.resultado === "éxito") { ... renderizar interfaz ... }
+  })
+  .catch(error => {
+    console.error("Error crítico de comunicación con el Script:", error);
+    // Aquí controlas el mensaje visual en la interfaz de usuario
+  });
+}
   function actualizarSelectsProductos() {
     document.querySelectorAll('.select-producto').forEach(select => {
       const val = select.value;
