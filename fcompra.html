@@ -18,12 +18,6 @@
     body { background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
     .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
-    /* Encabezado e Imagen Institucional */
-    .empresa-header { text-align: center; margin-bottom: 30px; }
-    .empresa-header img { max-height: 100px; margin-bottom: 10px; }
-    .empresa-header h2 { margin: 5px 0; color: #444; font-size: 22px; }
-    .empresa-header p { margin: 2px 0; color: #666; font-size: 14px; }
-
     h3 { border-left: 5px solid var(--primary-color); padding-left: 10px; color: #2c3e50; margin-top: 25px; }
     
     /* Grid de Formulario */
@@ -48,22 +42,23 @@
     .total-row.final { font-size: 18px; font-weight: bold; color: var(--primary-color); border-top: 2px solid var(--border-color); padding-top: 10px; }
 
     /* Botones del Formulario */
-    .actions-bar { display: flex; justify-content: space-between; margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+    .actions-bar { display: flex; justify-content: space-between; margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; margin-bottom: 40px; }
     .btn-submit { background-color: var(--primary-color); color: white; font-size: 16px; font-weight: bold; padding: 12px 25px; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
     .btn-submit:hover { background-color: var(--primary-hover); }
     .btn-clear { background-color: #e0e0e0; color: #333; font-size: 14px; padding: 12px 25px; border: none; border-radius: 4px; cursor: pointer; }
     
     .link-alerta { font-size: 11px; color: #e67e22; text-decoration: underline; margin-top: 4px; cursor: pointer; display: none; }
+
+    /* Nuevo Encabezado / Pie de Página Institucional (Abajo) */
+    .empresa-footer { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border-color); }
+    .empresa-footer p { margin: 4px 0; color: #333333; font-size: 15px; }
+    .empresa-footer p strong { color: #000; font-weight: bold; text-decoration: underline; }
+    .empresa-footer img { max-height: 90px; margin-top: 15px; display: inline-block; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="empresa-header">
-    <img src="logo1.png" alt="Logo Empresa" onerror="this.style.display='none';">
-    <h2>SURTECOL</h2>
-    <p>Tel.: +573188097131 | Email: surtecol@gmail.com | Colombia</p>
-  </div>
 
   <form id="facturaForm">
     <h3>Información General del Egreso (Factura)</h3>
@@ -118,13 +113,13 @@
       <table id="tablaItems">
         <thead>
           <tr>
-            <th style="width: 20%;">Descripción del Item</th>
-            <th style="width: 10%;">Cant.</th>
+            <th style="width: 25%;">Descripción del Item</th>
+            <th style="width: 8%;">Cant.</th>
             <th style="width: 12%;">Valor Unit.</th>
             <th style="width: 10%;">U. Medida</th>
             <th style="width: 8%;">% IVA</th>
             <th style="width: 8%;">% Ipocons.</th>
-            <th style="width: 15%;">Kardex?</th>
+            <th style="width: 22%;">Kardex?</th>
             <th style="width: 7%;">Acción</th>
           </tr>
         </thead>
@@ -163,17 +158,22 @@
       <button type="submit" class="btn-submit" id="btnRegistrar">REGISTRAR FACTURA</button>
     </div>
   </form>
+
+  <div class="empresa-footer">
+    <p>Este es un desarrollo creado por <strong>Surtecol</strong></p>
+    <p>Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia</p>
+    <img src="logo1.png" alt="Logo Surtecol" onerror="this.style.display='none';">
+  </div>
 </div>
 
 <script>
-  // URL DEL WEB APP DE GOOGLE APPS SCRIPT (Sustituir con la tuya propia)
+  // URL DE TU WEB APP DE GOOGLE APPS SCRIPT ASIGNADA
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
   
   let databaseProductos = [];
 
-  // Al cargar la página, traer información del PUC y catálogo de Productos
   window.addEventListener('DOMContentLoaded', () => {
-    agregarFilaItem(); // Iniciar con una fila por defecto
+    agregarFilaItem(); 
     cargarDatosConfiguracion();
   });
 
@@ -181,7 +181,6 @@
     fetch(WEB_APP_URL)
       .then(res => res.json())
       .then(data => {
-        // Llenar Select PUC
         const selectPuc = document.getElementById('cuentaPuc');
         selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
         data.puc.forEach(cod => {
@@ -190,7 +189,6 @@
           selectPuc.appendChild(opt);
         });
         
-        // Guardar catálogo para el Kardex
         databaseProductos = data.productos;
         actualizarSelectsProductos();
       })
@@ -222,7 +220,7 @@
     tr.id = rowId;
     tr.innerHTML = `
       <td>
-        <input type="text" class="item-descripcion" required placeholder="Nombre del artículo" oninput="sincronizarTextoLibre('${rowId}')">
+        <input type="text" class="item-descripcion" required placeholder="Nombre del artículo" style="width:100%;">
       </td>
       <td><input type="number" class="item-cantidad" value="1" min="1" required style="width:100%;" oninput="calcularTotalesFactura()"></td>
       <td><input type="number" class="item-valorunit" value="0" min="0" required style="width:100%;" oninput="calcularTotalesFactura()"></td>
@@ -267,10 +265,6 @@
     }
   }
 
-  function sincronizarTextoLibre(rowId) {
-    // Si necesitas vincular búsquedas dinámicas avanzadas, puedes implementarlas aquí
-  }
-
   function calcularTotalesFactura() {
     let subtotalGeneral = 0;
     let totalIva = 0;
@@ -295,14 +289,12 @@
     const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
     const totalGeneral = subtotalGeneral + totalIva + totalIpoconsumo - otrosDescuentos;
 
-    // Mostrar valores formateados en pantalla
     document.getElementById('txtSubtotal').textContent = `$${subtotalGeneral.toFixed(2)}`;
     document.getElementById('txtIva').textContent = `$${totalIva.toFixed(2)}`;
     document.getElementById('txtIpoconsumo').textContent = `$${totalIpoconsumo.toFixed(2)}`;
     document.getElementById('txtTotal').textContent = `$${totalGeneral.toFixed(2)}`;
   }
 
-  // Interceptar envío de datos
   document.getElementById('facturaForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btnRegistrar');
@@ -321,7 +313,6 @@
       archivoBase64 = await convertirFileToBase64(file);
     }
 
-    // Construcción del JSON consolidado
     const payload = {
       noFactura: document.getElementById('noFactura').value,
       nit: document.getElementById('nit').value,
@@ -332,20 +323,15 @@
       cuentaPuc: document.getElementById('cuentaPuc').value,
       descripcionGeneral: document.getElementById('descripcionGeneral').value,
       otrosDescuentos: parseFloat(document.getElementById('otrosDescuentos').value) || 0,
-      
-      // Adjunto en Base64
       archivoB64: archivoBase64,
       archivoNombre: archivoNombre,
       archivoMime: archivoMime,
-
-      // Arrays de ítems individuales para la pestaña DETALLE y KARDEX
       items: []
     };
 
     let totalSubtotalFactura = 0;
     let totalIvaFactura = 0;
     let totalIpoconsumoFactura = 0;
-    let totalCantidades = 0;
 
     document.querySelectorAll('#bodyItems tr').forEach(fila => {
       const descripcion = fila.querySelector('.item-descripcion').value;
@@ -366,7 +352,6 @@
       totalSubtotalFactura += subtotalItem;
       totalIvaFactura += ivaItem;
       totalIpoconsumoFactura += ipoconsumoItem;
-      totalCantidades += cantidad;
 
       payload.items.push({
         descripcion: descripcion,
@@ -378,12 +363,11 @@
         otrosItem: 0,
         valorTotalItem: totalItem,
         incluirKardex: checkKardex,
-        idProducto: idProducto // ID tomado desde PRODUCTOSERVICIO si aplica
+        idProducto: idProducto 
       });
     });
 
-    // Consolidación de datos calculados globales para la pestaña EGRESOS
-    payload.cantidadGeneral = 1; // Tal como el ejemplo provisto
+    payload.cantidadGeneral = 1;
     payload.subtotalGeneral = totalSubtotalFactura;
     payload.porcentajeIvaGeneral = payload.items[0] ? parseFloat(document.querySelectorAll('#bodyItems tr')[0].querySelector('.item-piva').value) || 0 : 0;
     payload.ivaGeneral = totalIvaFactura;
@@ -391,10 +375,9 @@
     payload.ipoconsumoGeneral = totalIpoconsumoFactura;
     payload.totalGeneral = (totalSubtotalFactura + totalIvaFactura + totalIpoconsumoFactura) - payload.otrosDescuentos;
 
-    // Enviar datos al Web App mediante POST sincrónico
     fetch(WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors', // Evita problemas de CORS al escribir directo desde GitHub Pages
+      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
@@ -404,7 +387,7 @@
     })
     .catch(error => {
       console.error("Error:", error);
-      alert("Factura enviada. Compruebe la hoja de cálculo.");
+      alert("Hubo un percance en la red. Verifique la hoja de cálculo.");
     })
     .finally(() => {
       btn.disabled = false;
