@@ -19,6 +19,7 @@
     body { background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
     .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     
+    /* Panel de Consulta en la zona superior */
     .search-bar { display: flex; background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #dcdfe4; gap: 10px; align-items: center; }
     .search-bar label { font-size: 13px; font-weight: bold; color: #34495e; text-transform: uppercase; }
     .search-bar input { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 14px; width: 250px; }
@@ -31,6 +32,7 @@
     .form-group { display: flex; flex-direction: column; }
     .form-group label { font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #555; text-transform: uppercase; }
     .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary-color); outline: none; }
 
     .table-container { overflow-x: auto; margin-top: 15px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; background: #fff; }
@@ -53,6 +55,7 @@
     .link-alerta { font-size: 11px; color: #e67e22; text-decoration: underline; margin-top: 4px; cursor: pointer; display: none; }
     .empresa-footer { text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border-color); }
     .empresa-footer p { margin: 4px 0; color: #333333; font-size: 15px; }
+    .empresa-footer img { max-height: 90px; margin-top: 15px; display: inline-block; }
     
     .modo-badge { background: #e67e22; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; display: none; margin-left: 10px; font-weight: normal; vertical-align: middle; }
   </style>
@@ -68,7 +71,7 @@
   </div>
 
   <form id="facturaForm">
-    <h3>Información de la factura de compra <span id="badgeModo" class="modo-badge">MODO EDICIÓN</span></h3>
+    <h3>Información General del Egreso <span id="badgeModo" class="modo-badge">MODO EDICIÓN</span></h3>
     
     <div class="grid-form">
       <div class="form-group">
@@ -102,8 +105,8 @@
         </select>
       </div>
       <div class="form-group">
-        <label id="lblArchivo">Adjuntar Factura (Opcional)</label>
-        <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png">
+        <label id="lblArchivo">Adjuntar Factura (PDF/JPG)</label>
+        <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png" required>
         <span id="txtLinkExistente" style="font-size:11px; color:#2980b9; margin-top:4px; display:none;"></span>
       </div>
     </div>
@@ -140,7 +143,7 @@
         <div class="total-row"><span>TOTAL IVA:</span><span id="txtIva">$0.00</span></div>
         <div class="total-row"><span>TOTAL IPOCONSUMO:</span><span id="txtIpoconsumo">$0.00</span></div>
         <div class="total-row">
-          <span style="align-self: center;">OTROS COBROS / SUMAS (+):</span>
+          <span style="align-self: center;">OTROS DESCUENTOS (-):</span>
           <input type="number" id="otrosDescuentos" value="0" min="0" style="width: 100px; text-align: right;" oninput="calcularTotalesFactura()">
         </div>
         <div class="total-row final"><span>TOTAL FACTURA:</span><span id="txtTotal">$0.00</span></div>
@@ -157,6 +160,7 @@
   <div class="empresa-footer">
     <p>Este es un desarrollo creado por <strong>Surtecol</strong></p>
     <p>Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia</p>
+    <img src="logo1.png" alt="Logo Surtecol" onerror="this.style.display='none';">
   </div>
 </div>
 
@@ -164,7 +168,7 @@
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
   
   let databaseProductos = [];
-  let modoActual = "CREAR"; 
+  let modoActual = "CREAR"; // Puede cambiar a "EDITAR"
   let linkArchivoExistenteGlobal = "";
 
   window.addEventListener('DOMContentLoaded', () => {
@@ -173,30 +177,21 @@
   });
 
   function cargarDatosConfiguracion() {
-  const urlUrlScript = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
+    fetch(WEB_APP_URL)
+      .then(res => res.json())
+      .then(data => {
+        const selectPuc = document.getElementById('cuentaPuc');
+        selectPuc.innerHTML = '<option value="">-- Seleccione Cuenta --</option>';
+        data.puc.forEach(cod => {
+          let opt = document.createElement('option');
+          opt.value = cod; opt.textContent = cod;
+          selectPuc.appendChild(opt);
+        });
+        databaseProductos = data.productos;
+        actualizarSelectsProductos();
+      });
+  }
 
-  fetch(urlUrlScript, {
-    method: 'GET', // o 'POST' según cómo lo tengas configurado
-    redirect: 'follow' // <- ESTA LÍNEA ES VITAL para evitar el bloqueo de CORS en redirecciones de Google
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Error en la red al intentar conectar con el Script');
-    }
-    return response.json();
-  })
-  .then(objetoScript => {
-    // Aquí procesas los catálogos recibidos (Cuentas PUC, Productos, etc.)
-    console.log("Datos cargados correctamente:", objetoScript);
-    
-    // Ejemplo de mapeo si tu script retorna la estructura del paso 1:
-    // si (objetoScript.resultado === "éxito") { ... renderizar interfaz ... }
-  })
-  .catch(error => {
-    console.error("Error crítico de comunicación con el Script:", error);
-    // Aquí controlas el mensaje visual en la interfaz de usuario
-  });
-}
   function actualizarSelectsProductos() {
     document.querySelectorAll('.select-producto').forEach(select => {
       const val = select.value;
@@ -222,14 +217,17 @@
           return;
         }
 
+        // Cambiar a MODO EDICIÓN
         modoActual = "EDITAR";
         document.getElementById('badgeModo').style.display = "inline-block";
         document.getElementById('btnEliminar').style.display = "block";
         document.getElementById('btnRegistrar').textContent = "APLICAR MODIFICACIÓN";
         
+        // Bloquear número de factura para evitar inconsistencias en cascada
         document.getElementById('noFactura').value = res.data.noFactura;
         document.getElementById('noFactura').disabled = true;
 
+        // Mapear datos maestros
         document.getElementById('nit').value = res.data.nit;
         document.getElementById('razonSocial').value = res.data.razonSocial;
         document.getElementById('direccion').value = res.data.direccion || "";
@@ -238,32 +236,36 @@
         document.getElementById('descripcionGeneral').value = res.data.descripcionGeneral;
         document.getElementById('otrosDescuentos').value = res.data.otrosDescuentos;
         
+        // Tratar Fecha ISO
         if(res.data.fecha) {
           document.getElementById('fecha').value = res.data.fecha.split("T")[0];
         }
 
+        // Manejar el archivo digital
         if(res.data.linkArchivo) {
           linkArchivoExistenteGlobal = res.data.linkArchivo;
+          document.getElementById('archivoAdjunto').required = false;
           const spanLink = document.getElementById('txtLinkExistente');
           spanLink.innerHTML = `<a href="${res.data.linkArchivo}" target="_blank">📄 Ver documento actual</a> (Opcional: Suba otro para cambiarlo)`;
           spanLink.style.display = "block";
         }
 
+        // Cargar Ítems en la tabla
         const tbody = document.getElementById('bodyItems');
-        tbody.innerHTML = ""; 
+        tbody.innerHTML = ""; // Limpiar filas por defecto
         
         if(res.data.items && res.data.items.length > 0) {
           res.data.items.forEach(item => {
-            agregarFilaItemObjeto(item);
+            const rowId = agregarFilaItemObjeto(item);
           });
         } else {
           agregarFilaItem();
         }
 
         calcularTotalesFactura();
-        alert("Factura cargada correctamente.");
+        alert("Factura cargada en el formulario para modificación o eliminación.");
       })
-      .catch(err => alert("Error al buscar la factura."));
+      .catch(err => alert("Error de comunicación al buscar datos."));
   }
 
   function agregarFilaItem() {
@@ -329,7 +331,7 @@
     });
 
     const otrosDescuentos = parseFloat(document.getElementById('otrosDescuentos').value) || 0;
-    const totalGeneral = subtotalGeneral + totalIva + totalIpoconsumo + otrosDescuentos;
+    const totalGeneral = subtotalGeneral + totalIva + totalIpoconsumo - otrosDescuentos;
 
     document.getElementById('txtSubtotal').textContent = `$${subtotalGeneral.toFixed(2)}`;
     document.getElementById('txtIva').textContent = `$${totalIva.toFixed(2)}`;
@@ -339,17 +341,16 @@
 
   function eliminarFacturaActual() {
     const noFactura = document.getElementById('noFactura').value;
-    if(!confirm(`¿Está seguro de que desea eliminar permanentemente la Factura No. ${noFactura}?`)) return;
+    if(!confirm(`¿Está seguro de que desea eliminar permanentemente la Factura No. ${noFactura} de todas las pestañas de control?`)) return;
 
     fetch(WEB_APP_URL, {
       method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accion: "ELIMINAR", noFactura: noFactura })
-    })
-    .then(() => {
-      alert("Comprobante eliminado con éxito del sistema.");
+    }).then(() => {
+      alert("Factura eliminada del sistema.");
       limpiarFormulario();
-    }).catch(() => {
-      alert("Error procesando la eliminación.");
     });
   }
 
@@ -419,21 +420,17 @@
     payload.ivaGeneral = totalIvaFactura;
     payload.porcentajeIpoconsumoGeneral = payload.items[0] ? parseFloat(document.querySelectorAll('#bodyItems tr')[0].querySelector('.item-pipoco').value) || 0 : 0;
     payload.ipoconsumoGeneral = totalIpoconsumoFactura;
-    payload.totalGeneral = (totalSubtotalFactura + totalIvaFactura + totalIpoconsumoFactura) + payload.otrosDescuentos;
+    payload.totalGeneral = (totalSubtotalFactura + totalIvaFactura + totalIpoconsumoFactura) - payload.otrosDescuentos;
 
     fetch(WEB_APP_URL, {
       method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    })
-    .then(() => {
-      alert(modoActual === "EDITAR" ? "Factura modificada con éxito." : "Factura guardada correctamente en el libro.");
+    }).then(() => {
+      alert(modoActual === "EDITAR" ? "Factura actualizada exitosamente." : "Factura guardada con éxito.");
       limpiarFormulario();
-    })
-    .catch((err) => {
-      console.error(err);
-      alert("Fallo en la comunicación.");
-    })
-    .finally(() => {
+    }).finally(() => {
       btn.disabled = false;
     });
   });
@@ -453,6 +450,8 @@
     document.getElementById('badgeModo').style.display = "none";
     document.getElementById('btnEliminar').style.display = "none";
     document.getElementById('txtLinkExistente').style.display = "none";
+    document.getElementById('archivoAdjunto').required = true;
+    document.getElementById('btnRegistrar').textContent = "REGISTRAR FACTURA";
     document.getElementById('bodyItems').innerHTML = "";
     document.getElementById('txtBuscarFactura').value = "";
     agregarFilaItem();
