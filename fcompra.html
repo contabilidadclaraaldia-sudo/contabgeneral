@@ -1,512 +1,483 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang=\"es\">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Surtecol - Registro de Factura de Compra</title>
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Módulo de Facturación - Registro y Gestión de Compras</title>
   <style>
     :root {
-      --primary: #2c3e50;
-      --accent: #16a085;
-      --bg: #f5f6fa;
-      --border: #dcdde1;
+      --primary-color: #009688;
+      --primary-hover: #00796b;
+      --bg-color: #f5f7fa;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+      --danger-color: #e74c3c;
     }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg);
-      margin: 0;
-      padding: 20px;
-      color: #333;
-    }
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }
-    h2 {
-      color: var(--primary);
-      border-bottom: 2px solid var(--bg);
-      padding-bottom: 10px;
-      margin-top: 0;
-    }
-    .section-title {
-      background: #eef2f3;
-      padding: 8px 12px;
-      font-weight: bold;
-      margin: 20px 0 10px 0;
-      border-left: 4px solid var(--accent);
-    }
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 15px;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .form-group label {
-      margin-bottom: 5px;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    input, select, textarea {
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 14px;
-      outline: none;
-    }
-    input:focus, select:focus {
-      border-color: var(--accent);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid var(--border);
-      padding: 8px;
-      text-align: left;
-      font-size: 13px;
-    }
-    th {
-      background-color: #f8f9fa;
-      color: var(--primary);
-    }
-    .btn {
-      background-color: var(--accent);
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-      transition: background 0.2s;
-    }
-    .btn:hover {
-      background-color: #117a65;
-    }
-    .btn-add {
-      background-color: #2980b9;
-      margin-top: 10px;
-    }
-    .btn-add:hover {
-      background-color: #1f618d;
-    }
-    .btn-danger {
-      background-color: #c0392b;
-      padding: 5px 10px;
-    }
-    .btn-danger:hover {
-      background-color: #962d22;
-    }
-    .kardex-link {
-      font-size: 11px;
-      color: #2980b9;
-      text-decoration: none;
-      margin-top: 3px;
-    }
-    .kardex-link:hover {
-      text-decoration: underline;
-    }
-    .footer-surtecol {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: #7f8c8d;
-    }
-    .footer-surtecol img {
-      max-width: 180px;
-      margin-top: 10px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .total-box {
-      background-color: #fcfcfc;
-      border: 1px dashed var(--accent);
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 4px;
-    }
+
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    .search-bar { display: flex; background: #eef2f5; padding: 15px; border-radius: 6px; margin-bottom: 25px; gap: 10px; align-items: center; }
+    .search-bar input { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 16px; }
+    .search-bar button { padding: 10px 20px; background: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    .search-bar button:hover { background: #2c3e50; }
+
+    .badge { display: inline-block; padding: 5px 10px; background: #f39c12; color: white; border-radius: 4px; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
+    
+    h2, h3 { margin-top: 0; color: #2c3e50; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-weight: 600; margin-bottom: 5px; font-size: 14px; color: #555; }
+    .form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; background: #fff; }
+    .form-group input:disabled, .form-group select:disabled { background: #eaeded; color: #7f8c8d; }
+
+    .table-container { overflow-x: auto; margin-top: 25px; margin-bottom: 25px; }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table th { background: #34495e; color: white; padding: 12px 10px; text-align: left; font-size: 14px; }
+    table td { padding: 8px; border-bottom: 1px solid var(--border-color); }
+    table input, table select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; }
+
+    .totales-wrapper { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .totales-box { width: 350px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid var(--border-color); }
+    .totales-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+    .totales-line.grand-total { border-top: 2px solid #34495e; padding-top: 8px; font-weight: bold; font-size: 18px; color: var(--primary-color); }
+
+    .actions-bar { display: flex; justify-content: space-between; margin-top: 30px; gap: 15px; }
+    .btn { padding: 12px 25px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
+    .btn-submit { background: var(--primary-color); color: white; flex: 2; }
+    .btn-submit:hover { background: var(--primary-hover); }
+    .btn-danger { background: var(--danger-color); color: white; flex: 1; display: none; }
+    .btn-danger:hover { background: #c0392b; }
+    
+    .link-existente { margin-top: 5px; font-size: 13px; }
+    .link-existente a { color: #2980b9; font-weight: bold; text-decoration: none; }
+    .link-existente a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Módulo de Egresos - Registro de Factura de Compra</h2>
-  
-  <form id="compraForm">
+  <div class="search-bar">
+    <input type="text" id="buscarNoFactura" placeholder="Ingresa el No. de Factura para Buscar / Editar / Eliminar...">
+    <button type="button" id="btnBuscar" onclick="buscarFacturaCompra()">Buscar Factura</button>
+  </div>
+
+  <div id="badgeModo" class="badge" style="display: none;">MODO EDICIÓN</div>
+
+  <form id="facturaForm" autocomplete="off">
+    <h2>Información General del Egreso (Compra)</h2>
     
-    <div class="section-title">Información General del Egreso</div>
-    <div class="grid-3">
+    <div class="grid-4">
       <div class="form-group">
-        <label for="noFactura">No. FACTURA *</label>
+        <label for="fecha">Fecha *</label>
+        <input type="date" id="fecha" required>
+      </div>
+      <div class="form-group">
+        <label for="noFactura">No. Factura *</label>
         <input type="text" id="noFactura" required>
       </div>
       <div class="form-group">
         <label for="nit">NIT Proveedor *</label>
-        <input type="text" id="nit" required>
+        <input type="text" id="nit" required onchange="consultarProveedorPorNit()">
       </div>
       <div class="form-group">
         <label for="razonSocial">Razón Social *</label>
         <input type="text" id="razonSocial" required>
       </div>
+    </div>
+
+    <div class="grid-4">
       <div class="form-group">
-        <label for="fecha">Fecha Factura *</label>
-        <input type="date" id="fecha" required>
-      </div>
-      <div class="form-group">
-        <label for="direccion">Dirección *</label>
-        <input type="text" id="direccion" required>
+        <label for="direccion">Dirección</label>
+        <input type="text" id="direccion">
       </div>
       <div class="form-group">
         <label for="comprador">Comprador *</label>
-        <input type="text" id="comprador" required>
-      </div>
-    </div>
-
-    <div style="margin-top: 15px;" class="grid-3">
-      <div class="form-group" style="grid-column: span 2;">
-        <label for="descripcionGeneral">Descripción Resumen General *</label>
-        <input type="text" id="descripcionGeneral" placeholder="Ej: Compra de alimentos, papelería, etc." required>
-      </div>
-      <div class="form-group">
-        <label for="cuentaPuc">Cuenta PUC *</label>
-        <select id="cuentaPuc" required>
-          <option value="">Seleccione Cuenta...</option>
+        <select id="comprador" required>
+          <option value="">Seleccione...</option>
+          <option value="ALEXANDER FRANCO AVILA">ALEXANDER FRANCO AVILA</option>
+          <option value="CARLOS SAUL CORZO">CARLOS SAUL CORZO</option>
         </select>
       </div>
-    </div>
-
-    <div style="margin-top: 15px;" class="grid-3">
       <div class="form-group">
-        <label for="archivoAdjunto">Adjuntar Factura (PDF / JPG) *</label>
-        <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png, .zip" required>
+        <label for="cuentaPuc">Cuenta PUC Gasto *</label>
+        <input type="text" id="cuentaPuc" placeholder="Escriba para buscar código..." required list="pucList">
+        <datalist id="pucList"></datalist>
+      </div>
+      <div class="form-group">
+        <label for="archivoAdjunto">Archivo Adjunto (Soporte)</label>
+        <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png, .zip">
+        <div id="txtLinkExistente" class="link-existente" style="display: none;"></div>
       </div>
     </div>
 
-    <div class="section-title">Detalle de Ítems (Alojados en pestaña DETALLE)</div>
-    <table id="tablaItems">
-      <thead>
-        <tr>
-          <th>Producto / Servicio *</th>
-          <th>Cantidad *</th>
-          <th>Valor Unitario *</th>
-          <th>Unidad Medida</th>
-          <th>% IVA</th>
-          <th>% IPO</th>
-          <th>Otros</th>
-          <th>¿Al Kardex?</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody id="bodyItems">
+    <div class="form-group" style="margin-bottom: 25px;">
+      <label for="descripcionGeneral">Descripción General de la Compra *</label>
+      <input type="text" id="descripcionGeneral" placeholder="Ej: Compra de materiales e insumos de ferretería para mantenimiento..." required>
+    </div>
+
+    <h3>Desglose Detallado de Ítems (Máximo 5)</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">Descripción del Ítem</th>
+            <th style="width: 12%;">Valor Unitario</th>
+            <th style="width: 8%;">Cant.</th>
+            <th style="width: 12%;">Unidad Medida</th>
+            <th style="width: 10%;">% IVA</th>
+            <th style="width: 10%;">% IPO</th>
+            <th style="width: 13%;">Valor Total</th>
+            <th style="width: 10%;">¿Kardex?</th>
+          </tr>
+        </thead>
+        <tbody id="tablaItems">
+          <script>
+            for(let i=0; i<5; i++) {
+              document.write(`
+                <tr class="item-row">
+                  <td>
+                    <input type="text" class="item-desc" placeholder="Buscar o ingresar..." list="productosList" onchange="evaluarRequerimientoKardex(${i})">
+                  </td>
+                  <td><input type="number" class="item-val" value="0" min="0" step="any" oninput="calcularFila(${i})"></td>
+                  <td><input type="number" class="item-cant" value="0" min="0" oninput="calcularFila(${i})"></td>
+                  <td>
+                    <select class="item-unidad">
+                      <option value="UNIDAD">UNIDAD</option>
+                      <option value="METRO">METRO</option>
+                      <option value="GLOBAL">GLOBAL</option>
+                      <option value="KILO">KILO</option>
+                      <option value="LITRO">LITRO</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select class="item-piva" onchange="calcularFila(${i})">
+                      <option value="0">0%</option>
+                      <option value="5">5%</option>
+                      <option value="19">19%</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select class="item-pipo" onchange="calcularFila(${i})">
+                      <option value="0">0%</option>
+                      <option value="4">4%</option>
+                      <option value="8">8%</option>
+                    </select>
+                  </td>
+                  <td><input type="number" class="item-total" value="0" disabled></td>
+                  <td>
+                    <select class="item-kardex" id="kardex_${i}" disabled>
+                      <option value="false">NO</option>
+                      <option value="true">SI</option>
+                    </select>
+                  </td>
+                </tr>
+              `);
+            }
+          </script>
         </tbody>
-    </table>
-    <button type="button" class="btn btn-add" onclick="agregarFilaItem()">+ Agregar Ítems a la Factura</button>
+      </table>
+    </div>
 
-    <div class="section-title">Consolidado y Totales de la Factura (Pestaña EGRESOS)</div>
-    <div class="total-box grid-3">
-      <div class="form-group">
-        <label for="subtotalGeneral">Subtotal Consolidado</label>
-        <input type="number" id="subtotalGeneral" value="0" readonly>
-      </div>
-      <div class="form-group">
-        <label for="porcentajeIva">% IVA Promedio</label>
-        <input type="number" id="porcentajeIva" value="0" step="0.01">
-      </div>
-      <div class="form-group">
-        <label for="ivaGeneral">Valor Total IVA</label>
-        <input type="number" id="ivaGeneral" value="0" readonly>
-      </div>
-      <div class="form-group">
-        <label for="porcentajeIpoconsumo">% IPOCONSUMO Promedio</label>
-        <input type="number" id="porcentajeIpoconsumo" value="0" step="0.01">
-      </div>
-      <div class="form-group">
-        <label for="ipoconsumoGeneral">Valor Total IPOCONSUMO</label>
-        <input type="number" id="ipoconsumoGeneral" value="0" readonly>
-      </div>
-      <div class="form-group">
-        <label for="otrosDescuentos">Otros Descuentos / Cargos</label>
-        <input type="number" id="otrosDescuentos" value="0" step="0.01" oninput="calcularTotalesGenerales()">
-      </div>
-      <div class="form-group">
-        <label for="cantidadGeneral">Cantidad de Ítems</label>
-        <input type="number" id="cantidadGeneral" value="0" readonly>
-      </div>
-      <div class="form-group" style="grid-column: span 2;">
-        <label for="totalGeneral" style="color: var(--accent); font-size: 15px;">TOTAL FACTURA (Calculado)</label>
-        <input type="number" id="totalGeneral" value="0" style="font-weight: bold; border-color: var(--accent);" readonly>
+    <datalist id="productosList"></datalist>
+
+    <div class="totales-wrapper">
+      <div class="totales-box">
+        <div class="totales-line">
+          <span>Subtotal General:</span>
+          <span id="lblSubtotal">$ 0.00</span>
+        </div>
+        <div class="totales-line">
+          <span>Total IVA:</span>
+          <span id="lblIva">$ 0.00</span>
+        </div>
+        <div class="totales-line">
+          <span>Total Impoconsumo:</span>
+          <span id="lblIpoconsumo">$ 0.00</span>
+        </div>
+        <div class="totales-line" style="align-items: center; margin-top: 5px;">
+          <label for="otrosDescuentos" style="font-size: 15px; color:#555;">Otros Descuentos (-):</label>
+          <input type="number" id="otrosDescuentos" value="0" min="0" step="any" style="width: 120px; padding: 5px; text-align: right;" oninput="calcularTotalesGenerales()">
+        </div>
+        <div class="totales-line grand-total">
+          <span>TOTAL COMPRA:</span>
+          <span id="lblTotal">$ 0.00</span>
+        </div>
       </div>
     </div>
 
-    <div style="margin-top: 25px; text-align: right;">
-      <button type="submit" class="btn" id="btnGuardar">Registrar Factura de Compra</button>
+    <div class="actions-bar">
+      <button type="button" id="btnEliminar" class="btn btn-danger" onclick="eliminarFacturaCompra()">Eliminar Compra</button>
+      <button type="submit" id="btnRegistrar" class="btn btn-submit">Registrar Factura de Compra</button>
     </div>
+
   </form>
-
-  <div class="footer-surtecol">
-    <p>Este es un desarrollo creado por Surtecol<br>Tel.: +573188097131    |    email: surtecol@gmail.com    |    Colombia</p>
-    <img src="logo1.png" alt="Surtecol Logo">
-  </div>
 </div>
 
 <script>
-  // Reemplaza esta URL con la URL de ejecución de tu Web App de Google Apps Script publicada
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
-  
-  let baseProductos = [];
+  // Cambia esta URL por la URL actual de tu Web App publicada en Google Apps Script
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw67b0m8G67l7YI-3fK7M2qscwSg4N3D-M7B2R1Kj_K8wE4Gz-H4l4yU0ZzE_Z9bO3K/exec";
 
-  // Al cargar la página, se inicializan los datos desde Google Sheets de forma asíncrona
+  let productosGlobales = [];
+  let modoActual = "CREAR"; 
+  let linkArchivoExistenteGlobal = "";
+
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('fecha').valueAsDate = new Date();
-    cargarListasIniciales();
-    agregarFilaItem(); // Iniciar con una fila vacía por comodidad
+    cargarDatosIniciales();
   });
 
-  function cargarListasIniciales() {
+  function cargarDatosIniciales() {
     fetch(`${WEB_APP_URL}?action=getCompraInitData`)
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          // Llenar select de cuentas PUC
-          const selectPuc = document.getElementById("cuentaPuc");
-          res.data.puc.forEach(codigo => {
+          // Llenar PUC
+          const pucList = document.getElementById("pucList");
+          pucList.innerHTML = "";
+          res.data.puc.forEach(cod => {
             let opt = document.createElement("option");
-            opt.value = codigo; opt.textContent = codigo;
-            selectPuc.appendChild(opt);
+            opt.value = cod;
+            pucList.appendChild(opt);
           });
-          // Almacenar productos para los autocompletados del detalle
-          baseProductos = res.data.productos;
-          actualizarDesplegablesProductos();
-        } else {
-          alert("Error cargando listas de configuración: " + res.error);
+
+          // Guardar y llenar Productos
+          productosGlobales = res.data.productos;
+          const prodList = document.getElementById("productosList");
+          prodList.innerHTML = "";
+          productosGlobales.forEach(p => {
+            let opt = document.createElement("option");
+            opt.value = p.descripcion;
+            prodList.appendChild(opt);
+          });
         }
-      }).catch(err => console.error("Error inicial inicializando datos: ", err));
+      }).catch(err => console.error("Error cargando inicializadores:", err));
   }
 
-  function agregarFilaItem() {
-    const tbody = document.getElementById("bodyItems");
-    const tr = document.createElement("tr");
-    tr.className = "item-row";
-    
-    tr.innerHTML = `
-      <td>
-        <select class="item-prod" onchange="verificarKardexLink(this)" style="width:140px;" required>
-          <option value="">Seleccione...</option>
-        </select>
-        <div class="kardex-container"></div>
-      </td>
-      <td><input type="number" class="item-cant" value="1" min="0.1" step="any" oninput="calcularFila(this)" style="width:60px;" required></td>
-      <td><input type="number" class="item-val" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:90px;" required></td>
-      <td><input type="text" class="item-unid" value="UNIDAD" style="width:70px;"></td>
-      <td><input type="number" class="item-piva" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
-      <td><input type="number" class="item-pipo" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
-      <td><input type="number" class="item-otros" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:50px;"></td>
-      <td style="text-align:center;"><input type="checkbox" class="item-kardex" value="true"></td>
-      <td><button type="button" class="btn btn-danger" onclick="eliminarFilaItem(this)">X</button></td>
-      <input type="hidden" class="item-tot" value="0">
-      <input type="hidden" class="item-viva" value="0">
-      <input type="hidden" class="item-vipo" value="0">
-    `;
-    
-    tbody.appendChild(tr);
-    actualizarDesplegablesProductos();
-    calcularTotalesGenerales();
+  function consultarProveedorPorNit() {
+    const nitVal = document.getElementById("nit").value.trim();
+    if(!nitVal) return;
+    fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nitVal}`)
+      .then(res => res.json())
+      .then(res => {
+        if(res.success && res.data) {
+          document.getElementById("razonSocial").value = res.data.razonSocial || "";
+          document.getElementById("direccion").value = res.data.direccion || "";
+        }
+      });
   }
 
-  function eliminarFilaItem(btn) {
+  function evaluarRequerimientoKardex(index) {
     const rows = document.querySelectorAll(".item-row");
-    if (rows.length > 1) {
-      btn.closest("tr").remove();
-      calcularTotalesGenerales();
+    const descVal = rows[index].querySelector(".item-desc").value.trim();
+    const selectKardex = document.getElementById(`kardex_${index}`);
+    
+    const encontrado = productosGlobales.find(p => p.descripcion.toLowerCase() === descVal.toLowerCase());
+    if (encontrado) {
+      selectKardex.value = "true";
+      selectKardex.disabled = false;
     } else {
-      alert("La factura debe tener al menos un ítem detallado.");
+      selectKardex.value = "false";
+      selectKardex.disabled = true;
     }
   }
 
-  function actualizarDesplegablesProductos() {
-    const selects = document.querySelectorAll(".item-prod");
-    selects.forEach(sel => {
-      if (sel.options.length <= 1) { // Si no ha sido llenado
-        baseProductos.forEach(p => {
-          let opt = document.createElement("option");
-          opt.value = p.idUnico;
-          opt.textContent = p.descripcion;
-          sel.appendChild(opt);
-        });
-      }
-    });
-  }
-
-  function verificarKardexLink(select) {
-    const container = select.closest("td").querySelector(".kardex-container");
-    if (select.value === "") {
-      container.innerHTML = `<a href="https://docs.google.com/spreadsheets/d/1zQbCptkpCGEaeDCsxSETmVyDfkNwhhQG8SZMkKof8Wg/edit?gid=2140075473#gid=2140075473" target="_blank" class="kardex-link">¿No existe? Créalo aquí</a>`;
-    } else {
-      container.innerHTML = "";
-    }
-  }
-
-  function calcularFila(input) {
-    const row = input.closest("tr");
-    const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+  function calcularFila(index) {
+    const rows = document.querySelectorAll(".item-row");
+    const row = rows[index];
+    
     const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+    const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
     const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
     const pIpo = parseFloat(row.querySelector(".item-pipo").value) || 0;
-    const otros = parseFloat(row.querySelector(".item-otros").value) || 0;
     
-    const subtotalItem = cant * valUnit;
-    const vIva = subtotalItem * (pIva / 100);
-    const vIpo = subtotalItem * (pIpo / 100);
-    const valorTotalItem = subtotalItem + vIva + vIpo + otros;
+    const subtotalItem = valUnit * cant;
+    const ivaItem = subtotalItem * (pIva / 100);
+    const ipoItem = subtotalItem * (pIpo / 100);
+    const totalItem = subtotalItem + ivaItem + ipoItem;
     
-    row.querySelector(".item-tot").value = valorTotalItem;
-    row.querySelector(".item-viva").value = vIva;
-    row.querySelector(".item-vipo").value = vIpo;
-    
+    row.querySelector(".item-total").value = totalItem.toFixed(2);
     calcularTotalesGenerales();
   }
 
   function calcularTotalesGenerales() {
-    let subtotalConsolidado = 0;
-    let totalIva = 0;
-    let totalIpo = 0;
-    let totalItemsCount = 0;
-    
-    document.querySelectorAll(".item-row").forEach(row => {
-      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
-      const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
-      
-      subtotalConsolidado += (cant * valUnit);
-      totalIva += parseFloat(row.querySelector(".item-viva").value) || 0;
-      totalIpo += parseFloat(row.querySelector(".item-vipo").value) || 0;
-      totalItemsCount += cant;
-    });
-    
-    const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
-    
-    // Regla solicitada: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
-    const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
-    
-    document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
-    document.getElementById("ivaGeneral").value = Math.round(totalIva);
-    document.getElementById("ipoconsumoGeneral").value = Math.round(totalIpo);
-    document.getElementById("cantidadGeneral").value = totalItemsCount;
-    document.getElementById("totalGeneral").value = Math.round(totalFactura);
-    
-    // Calcular porcentajes ponderados visuales para la pestaña EGRESOS
-    document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
-    document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
-  }
+    const rows = document.querySelectorAll(".item-row");
+    let subtotalGen = 0;
+    let ivaGen = 0;
+    let ipoGen = 0;
+    let cantGen = 0;
 
-  // Interceptar envío de datos
-  document.getElementById("compraForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    const btn = document.getElementById("btnGuardar");
-    btn.disabled = true;
-    btn.textContent = "Procesando y Subiendo archivo...";
-    
-    const fileInput = document.getElementById("archivoAdjunto");
-    const file = fileInput.files[0];
-    
-    if (file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = function() {
-        enviarDatosFormulario(reader.result, file.name, file.type);
-      };
-    } else {
-      enviarDatosFormulario("", "", "");
-    }
-  });
-
-  function enviarDatosFormulario(base64Data, fileName, fileMime) {
-    const items = [];
-    document.querySelectorAll(".item-row").forEach(row => {
-      const selectProd = row.querySelector(".item-prod");
-      const descText = selectProd.options[selectProd.selectedIndex].text;
-      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+    rows.forEach(row => {
       const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
       const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
       const pIpo = parseFloat(row.querySelector(".item-pipo").value) || 0;
-      
-      items.push({
-        idProducto: selectProd.value,
-        descripcion: descText,
-        cantidad: cant,
-        valorUnitario: valUnit,
-        unidadMedida: row.querySelector(".item-unid").value,
-        ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
-        ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
-        otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
-        valorTotalItem: parseFloat(row.querySelector(".item-tot").value) || 0,
-        incluirKardex: row.querySelector(".item-kardex").checked
-      });
+
+      const sub = valUnit * cant;
+      subtotalGen += sub;
+      ivaGen += (sub * (pIva / 100));
+      ipoGen += (sub * (pIpo / 100));
+      if(sub > 0) { cantGen += cant; }
     });
 
+    const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
+    const totalGen = (subtotalGen + ivaGen + ipoGen) - otrosDesc;
+
+    document.getElementById("lblSubtotal").textContent = "$ " + subtotalGen.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById("lblIva").textContent = "$ " + ivaGen.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById("lblIpoconsumo").textContent = "$ " + ipoGen.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById("lblTotal").textContent = "$ " + totalGen.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+    
+    return { subtotalGen, ivaGen, ipoGen, totalGen, cantGen };
+  }
+
+  // ENVÍO DEL FORMULARIO CON VALIDACIÓN DE ARCHIVO OPCIONAL
+  document.getElementById("facturaForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("btnRegistrar");
+    btn.disabled = true;
+
+    const calc = calcularTotalesGenerales();
+    
     const payload = {
-      action: "crearCompra",
+      action: modoActual === "EDITAR" ? "editarCompra" : "crearCompra",
       data: {
-        noFactura: document.getElementById("noFactura").value,
-        nit: document.getElementById("nit").value,
-        razonSocial: document.getElementById("razonSocial").value,
         fecha: document.getElementById("fecha").value,
-        direccion: document.getElementById("direccion").value,
+        noFactura: document.getElementById("noFactura").value.trim(),
+        nit: document.getElementById("nit").value.trim(),
+        razonSocial: document.getElementById("razonSocial").value.trim(),
+        direccion: document.getElementById("direccion").value.trim(),
         comprador: document.getElementById("comprador").value,
-        descripcionGeneral: document.getElementById("descripcionGeneral").value,
-        cuentaPuc: document.getElementById("cuentaPuc").value,
-        archivoB64: base64Data,
-        archivoNombre: fileName,
-        archivoMime: fileMime,
-        
-        subtotalGeneral: parseFloat(document.getElementById("subtotalGeneral").value),
-        porcentajeIva: parseFloat(document.getElementById("porcentajeIva").value),
-        ivaGeneral: parseFloat(document.getElementById("ivaGeneral").value),
-        porcentajeIpoconsumo: parseFloat(document.getElementById("porcentajeIpoconsumo").value),
-        ipoconsumoGeneral: parseFloat(document.getElementById("ipoconsumoGeneral").value),
-        otrosDescuentos: parseFloat(document.getElementById("otrosDescuentos").value),
-        cantidadGeneral: parseFloat(document.getElementById("cantidadGeneral").value),
-        totalGeneral: parseFloat(document.getElementById("totalGeneral").value),
-        items: items
+        cuentaPuc: document.getElementById("cuentaPuc").value.trim(),
+        descripcionGeneral: document.getElementById("descripcionGeneral").value.trim(),
+        cantidadGeneral: calc.cantGen,
+        subtotalGeneral: calc.subtotalGen,
+        ivaGeneral: calc.ivaGen,
+        ipoconsumoGeneral: calc.ipoGen,
+        porcentajeIva: 0, 
+        porcentajeIpoconsumo: 0,
+        otrosDescuentos: parseFloat(document.getElementById("otrosDescuentos").value) || 0,
+        totalGeneral: calc.totalGen,
+        archivoB64: null,      // Por defecto nulo
+        archivoNombre: null,   // Por defecto nulo
+        archivoMime: null      // Por defecto nulo
       }
     };
 
+    // CAPTURA CON LOGICA CONDICIONAL: Solo convierte a B64 si el usuario seleccionó un archivo
+    const fileInput = document.getElementById("archivoAdjunto");
+    if (fileInput.files && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      payload.data.archivoNombre = file.name;
+      payload.data.archivoMime = file.type;
+      payload.data.archivoB64 = await convertirFileToBase64(file);
+    } else if (modoActual === "EDITAR" && linkArchivoExistenteGlobal) {
+      // Si está editando y no seleccionó archivo nuevo, conserva el link viejo
+      payload.data.archivoB64 = "CONSERVAR_EXISTENTE";
+    }
+
+    // Mapeo dinámico de filas de la tabla
+    payload.data.items = [];
+    const rows = document.querySelectorAll(".item-row");
+    rows.forEach((row, i) => {
+      const desc = row.querySelector(".item-desc").value.trim();
+      const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+      
+      if (desc && cant > 0) {
+        const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
+        const pIpo = parseFloat(row.querySelector(".item-pipo").value) || 0;
+        const subItem = valUnit * cant;
+        const targetKardex = document.getElementById(`kardex_${i}`);
+        
+        let idProdAsignado = "";
+        const matchProd = productosGlobales.find(p => p.descripcion.toLowerCase() === desc.toLowerCase());
+        if(matchProd) { idProdAsignado = matchProd.idUnico; }
+
+        payload.data.items.push({
+          descripcion: desc,
+          idProducto: idProdAsignado,
+          valorUnitario: valUnit,
+          cantidad: cant,
+          unidadMedida: row.querySelector(".item-unidad").value,
+          ivaItem: subItem * (pIva / 100),
+          ipoconsumoItem: subItem * (pIpo / 100),
+          otrosItem: 0,
+          valorTotalItem: parseFloat(row.querySelector(".item-total").value) || 0,
+          incluirKardex: targetKardex ? targetKardex.value : "false"
+        });
+      }
+    });
+
+    // Envío del paquete de datos a la Web App
     fetch(WEB_APP_URL, {
-      method: "POST",
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // Evita problemas de CORS preflight
       body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(res => {
-      if (res.success) {
-        alert(res.result);
-        document.getElementById("compraForm").reset();
-        document.getElementById("bodyItems").innerHTML = "";
-        agregarFilaItem();
-        document.getElementById('fecha').valueAsDate = new Date();
+      if(res.success) {
+        alert(modoActual === "EDITAR" ? "Factura de compra actualizada exitosamente." : "Factura de compra guardada con éxito.");
+        limpiarFormulario();
+        cargarDatosIniciales();
       } else {
-        alert("Error de procesamiento: " + res.error);
+        alert("Error del sistema: " + res.error);
       }
     })
     .catch(err => {
       console.error(err);
-      alert("Error crítico de red enviando los datos a Google Apps Script.");
+      alert("Error en la comunicación con el servidor.");
     })
     .finally(() => {
-      const btn = document.getElementById("btnGuardar");
       btn.disabled = false;
-      btn.textContent = "Registrar Factura de Compra";
     });
+  });
+
+  function convertirFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = e => reject(e);
+    });
+  }
+
+  function buscarFacturaCompra() {
+    const noFact = document.getElementById("buscarNoFactura").value.trim();
+    if(!noFact) { alert("Por favor ingresa un número de factura."); return; }
+    
+    // Aquí puedes enlazar tu lógica de consulta para rellenar los campos al editar
+    alert("Función de búsqueda lista para procesar la factura: " + noFact);
+  }
+
+  function eliminarFacturaCompra() {
+    const noFact = document.getElementById("noFactura").value;
+    if(!confirm(`¿Seguro que deseas eliminar la factura No. ${noFact}?`)) return;
+    
+    // Aquí puedes implementar el fetch para la acción eliminarCompra
+  }
+
+  function limpiarFormulario() {
+    modoActual = "CREAR";
+    linkArchivoExistenteGlobal = "";
+    document.getElementById('facturaForm').reset();
+    document.getElementById('noFactura').disabled = false;
+    document.getElementById('badgeModo').style.display = "none";
+    document.getElementById('btnEliminar').style.display = "none";
+    document.getElementById('txtLinkExistente').style.display = "none";
+    
+    // Volver a calcular totales limpios
+    document.getElementById('fecha').valueAsDate = new Date();
+    calcularTotalesGenerales();
+    
+    const rows = document.querySelectorAll(".item-row");
+    rows.forEach((r, i) => {
+      document.getElementById(`kardex_${i}`).disabled = true;
+    });
+    
+    document.getElementById('btnRegistrar').textContent = "Registrar Factura de Compra";
   }
 </script>
 
