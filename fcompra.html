@@ -349,15 +349,61 @@
     });
   }
  
-  function verificarKardexLink(select) {
+function verificarKardexLink(select) {
     const container = select.closest("td").querySelector(".kardex-container");
     if (select.value === "") {
-      container.innerHTML = `<a href="https://docs.google.com/spreadsheets/d/1zQbCptkpCGEaeDCsxSETmVyDfkNwhhQG8SZMkKof8Wg/edit?gid=2140075473#gid=2140075473" target="_blank" class="kardex-link">¿No existe? Créalo aquí</a>`;
+      // Reemplaza "productos.html" por la URL correspondiente en GitHub Pages si es diferente
+      container.innerHTML = `<a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22; font-weight: bold;">¿No existe el producto? Créalo aquí</a>`;
     } else {
       container.innerHTML = "";
     }
   }
- 
+
+// Nueva función para desplegar la ventana secundaria de forma controlada
+  function abrirCreadorProductos() {
+    const ancho = 850;
+    const alto = 600;
+    const izquierda = (screen.width - ancho) / 2;
+    const arriba = (screen.height - alto) / 2;
+    window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
+  }
+
+  // Escuchar el mensaje enviado desde productos.html al registrar un ítem nuevo
+  window.addEventListener("message", (event) => {
+    if (event.data === "refreshProductos") {
+      console.log("Detectado nuevo producto. Actualizando listas en fcompra...");
+      
+      // Consultar de nuevo los datos iniciales al script de Google sin recargar la página entera
+      fetch(`${WEB_APP_URL}?action=getCompraInitData`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            baseProductos = res.data.productos; // Actualiza la memoria local de productos [cite: 44]
+            
+            // Actualizar todos los selectores activos de la tabla manteniendo lo que ya estaba seleccionado
+            const selects = document.querySelectorAll(".item-prod");
+            selects.forEach(sel => {
+              const valorActual = sel.value; // Guardar selección actual del usuario
+              
+              // Limpiar opciones manteniendo únicamente la primera ("Seleccione...")
+              sel.innerHTML = '<option value="">Seleccione...</option>';
+              
+              // Volver a poblar con la lista actualizada desde Sheets
+              baseProductos.forEach(p => {
+                let opt = document.createElement("option");
+                opt.value = p.idUnico;
+                opt.textContent = p.descripcion;
+                sel.appendChild(opt);
+              });
+              
+              sel.value = valorActual; // Restaurar la selección previa del usuario
+              verificarKardexLink(sel); // Actualizar los estados de los links correspondientes
+            });
+          }
+        }).catch(err => console.error("Error al actualizar catálogos secundarios:", err));
+    }
+  });
+  
   function calcularFila(input) {
     const row = input.closest("tr");
     const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
