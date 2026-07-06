@@ -125,7 +125,7 @@
       color: #7f8c8d;
     }
     .footer-surtecol img {
-      max-width: 180px;
+      max-width: 110px; /* Reducido de 180px para que sea más pequeño al final de la hoja */
       margin-top: 10px;
       display: block;
       margin-left: auto;
@@ -143,7 +143,7 @@
 <body>
 
 <div class="container">
-  <h2>Módulo de Egresos - Registro de Factura de Compra</h2>
+  <h2>Registro de Factura de Compra</h2>
   
   <form id="compraForm">
     
@@ -220,17 +220,13 @@
         <label for="subtotalGeneral">Subtotal Consolidado</label>
         <input type="number" id="subtotalGeneral" value="0" readonly>
       </div>
-      <div class="form-group">
-        <label for="porcentajeIva">% IVA Promedio</label>
-        <input type="number" id="porcentajeIva" value="0" step="0.01">
-      </div>
+      
+      <input type="hidden" id="porcentajeIva" value="0">
+      <input type="hidden" id="porcentajeIpoconsumo" value="0">
+
       <div class="form-group">
         <label for="ivaGeneral">Valor Total IVA</label>
         <input type="number" id="ivaGeneral" value="0" readonly>
-      </div>
-      <div class="form-group">
-        <label for="porcentajeIpoconsumo">% IPOCONSUMO Promedio</label>
-        <input type="number" id="porcentajeIpoconsumo" value="0" step="0.01">
       </div>
       <div class="form-group">
         <label for="ipoconsumoGeneral">Valor Total IPOCONSUMO</label>
@@ -256,7 +252,7 @@
   </form>
  
   <div class="footer-surtecol">
-    <p>Este es un desarrollo creado por Surtecol<br>Tel.: +573188097131    |    email: surtecol@gmail.com   |    Colombia</p>
+    <p>Este es un desarrollo creado por Surtecol<br>Tel.: +573188097131    |    email: surtecol@gmail.com   |   Colombia</p>
     <img src="logo1.png" alt="Surtecol Logo">
   </div>
 </div>
@@ -303,13 +299,11 @@
     
     baseProductos.forEach(p => {
       let opt = document.createElement("option");
-      // Se asigna la descripción completa como valor visible e identificable
       opt.value = p.descripcion;
       opt.dataset.idUnico = p.idUnico;
       datalist.appendChild(opt);
     });
 
-    // Forzar actualización visual de las etiquetas en las filas ya existentes
     document.querySelectorAll(".item-prod").forEach(input => {
       controlarCambioProducto(input);
     });
@@ -360,22 +354,16 @@
     if (!container) return;
 
     const valorDigitado = input.value.trim();
-    
-    // Buscar si lo que el usuario escribió coincide con algún producto existente de la base de datos
     const productoExiste = baseProductos.find(p => p.descripcion.toLowerCase() === valorDigitado.toLowerCase());
 
     if (valorDigitado === "") {
       container.innerHTML = `<br><a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22;">¿No existe? Créalo aquí</a>`;
     } else if (!productoExiste) {
-      // Si digita a mano un ítem nuevo que NO está en la hoja PRODUCTOSERVICIO (Ej: Almuerzo)
       container.innerHTML = `<span style="color: #7f8c8d; font-size: 11px; font-style: italic; display:block; margin-top:3px;">Item manual (No Kardex)</span>`;
-      
-      // Desactivamos el checkbox de Kardex automáticamente por seguridad de inventario
       const fila = input.closest("tr");
       const checkKardex = fila.querySelector(".item-kardex");
       if (checkKardex) checkKardex.checked = false;
     } else {
-      // Si el producto seleccionado o escrito coincide con la base de datos
       container.innerHTML = `<span style="color: #16a085; font-size: 11px; font-weight: bold; display:block; margin-top:3px;">✓ Registrado [${productoExiste.idUnico}]</span>`;
     }
   }
@@ -388,11 +376,9 @@
     window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
   }
 
-  // Escuchar el mensaje enviado desde productos.html cuando se crea un ítem nuevo en Sheets
   window.addEventListener("message", (event) => {
     if (event.data === "refreshProductos") {
       console.log("Detectado nuevo producto. Sincronizando datalist en fcompra...");
-      
       fetch(`${WEB_APP_URL}?action=getCompraInitData`)
         .then(res => res.json())
         .then(res => {
@@ -442,7 +428,7 @@
     
     const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
     
-    // Regla de cálculo ajustada: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
+    // Regla de cálculo: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
     const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
     
     document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
@@ -451,6 +437,7 @@
     document.getElementById("cantidadGeneral").value = totalItemsCount;
     document.getElementById("totalGeneral").value = Math.round(totalFactura);
     
+    // Se actualizan los inputs ocultos para que viajen los valores correctos al backend
     document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
     document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
   }
@@ -481,10 +468,7 @@
       const inputProd = row.querySelector(".item-prod");
       const textoDigitado = inputProd.value.trim();
       
-      // Buscar correspondencia en los productos cargados
       const prodEncontrado = baseProductos.find(p => p.descripcion.toLowerCase() === textoDigitado.toLowerCase());
-      
-      // Si existe toma su código, si no, lo envía vacío para identificar que fue una inserción libre
       const idProducto = prodEncontrado ? prodEncontrado.idUnico : "";
       
       const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
@@ -492,10 +476,10 @@
       
       items.push({
         idProducto: idProducto,
-        descripcion: textoDigitado, // Envía el texto exacto (sea manual o autocompletado)
+        descripcion: textoDigitado,
         cantidad: cant,
         valorUnitario: valUnit,
-        unidadMedida: row.querySelector(".item-unid").value,
+        columnas: row.querySelector(".item-unid").value,
         ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
         ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
         otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
