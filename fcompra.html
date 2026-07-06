@@ -273,7 +273,20 @@
     cargarListasIniciales();
     agregarFilaItem(); // Iniciar con una fila vacía por comodidad
   });
- 
+ function cargarCatalogoProductos(select) {
+  // 1. Limpiar el selector e insertar la opción vacía inicial obligatoria
+  select.innerHTML = '<option value="">Seleccione un producto/servicio...</option>';
+  
+  // 2. Poblar con los productos provenientes de Google Sheets
+  baseProductos.forEach(prod => {
+    const opt = document.createElement("option");
+    opt.value = prod.idUnico;
+    // Guardamos la descripción en un atributo de datos para que tus cálculos sigan funcionando igual
+    opt.dataset.descripcion = prod.descripcion; 
+    opt.textContent = `${prod.idUnico} - ${prod.descripcion}`;
+    select.appendChild(opt);
+  });
+}
   function cargarListasIniciales() {
     fetch(`${WEB_APP_URL}?action=getCompraInitData`)
       .then(res => res.json())
@@ -350,23 +363,26 @@
   }
  
 function verificarKardexLink(select) {
-    const container = select.closest("td").querySelector(".kardex-container");
-    if (select.value === "") {
-      // Reemplaza "productos.html" por la URL correspondiente en GitHub Pages si es diferente
-      container.innerHTML = `<a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22; font-weight: bold;">¿No existe el producto? Créalo aquí</a>`;
-    } else {
-      container.innerHTML = "";
-    }
-  }
+  // Buscamos el contenedor del link dentro de la misma celda o fila correspondiente
+  const container = select.closest("td").querySelector(".kardex-container");
+  if (!container) return;
 
-// Nueva función para desplegar la ventana secundaria de forma controlada
-  function abrirCreadorProductos() {
-    const ancho = 850;
-    const alto = 600;
-    const izquierda = (screen.width - ancho) / 2;
-    const arriba = (screen.height - alto) / 2;
-    window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
+  // Si el valor es vacío (""), significa que seleccionó la opción inicial
+  if (select.value === "") {
+    container.innerHTML = `<br><a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22; font-weight: bold; font-size: 12px; text-decoration: none;">¿No existe? Créalo aquí</a>`;
+  } else {
+    container.innerHTML = ""; // Si selecciona un producto válido, se oculta el enlace
   }
+}
+
+// Nueva función para desplegar la ventana emergente de productos.html de forma centrada
+function abrirCreadorProductos() {
+  const ancho = 850;
+  const alto = 600;
+  const izquierda = (screen.width - ancho) / 2;
+  const arriba = (screen.height - alto) / 2;
+  window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
+}
 
   // Escuchar el mensaje enviado desde productos.html al registrar un ítem nuevo
   window.addEventListener("message", (event) => {
