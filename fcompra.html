@@ -108,9 +108,10 @@
     }
     .kardex-link {
       font-size: 11px;
-      color: #2980b9;
+      color: #e67e22;
       text-decoration: none;
       margin-top: 3px;
+      font-weight: bold;
     }
     .kardex-link:hover {
       text-decoration: underline;
@@ -209,8 +210,7 @@
           <th>Acción</th>
         </tr>
       </thead>
-      <tbody id="bodyItems">
-        </tbody>
+      <tbody id="bodyItems"></tbody>
     </table>
     <button type="button" class="btn btn-add" onclick="agregarFilaItem()">+ Agregar Ítems a la Factura</button>
  
@@ -260,33 +260,20 @@
     <img src="logo1.png" alt="Surtecol Logo">
   </div>
 </div>
+
+<datalist id="listaProductos"></datalist>
  
 <script>
-  // Reemplaza esta URL con la URL de ejecución de tu Web App de Google Apps Script publicada
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
   
   let baseProductos = [];
  
-  // Al cargar la página, se inicializan los datos desde Google Sheets de forma asíncrona
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('fecha').valueAsDate = new Date();
     cargarListasIniciales();
-    agregarFilaItem(); // Iniciar con una fila vacía por comodidad
+    agregarFilaItem(); 
   });
- function cargarCatalogoProductos(select) {
-  // 1. Limpiar el selector e insertar la opción vacía inicial obligatoria
-  select.innerHTML = '<option value="">Seleccione un producto/servicio...</option>';
-  
-  // 2. Poblar con los productos provenientes de Google Sheets
-  baseProductos.forEach(prod => {
-    const opt = document.createElement("option");
-    opt.value = prod.idUnico;
-    // Guardamos la descripción en un atributo de datos para que tus cálculos sigan funcionando igual
-    opt.dataset.descripcion = prod.descripcion; 
-    opt.textContent = `${prod.idUnico} - ${prod.descripcion}`;
-    select.appendChild(opt);
-  });
-}
+
   function cargarListasIniciales() {
     fetch(`${WEB_APP_URL}?action=getCompraInitData`)
       .then(res => res.json())
@@ -299,13 +286,33 @@
             opt.value = codigo; opt.textContent = codigo;
             selectPuc.appendChild(opt);
           });
-          // Almacenar productos para los autocompletados del detalle
+          
+          // Almacenar y renderizar el datalist global de productos
           baseProductos = res.data.productos;
-          actualizarDesplegablesProductos();
+          actualizarDatalistProductos();
         } else {
           alert("Error cargando listas de configuración: " + res.error);
         }
-      }).catch(err => console.error("Error inicial inicializando datos: ", err));
+      }).catch(err => console.error("Error inicializando datos: ", err));
+  }
+
+  function actualizarDatalistProductos() {
+    const datalist = document.getElementById("listaProductos");
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    
+    baseProductos.forEach(p => {
+      let opt = document.createElement("option");
+      // Se asigna la descripción completa como valor visible e identificable
+      opt.value = p.descripcion;
+      opt.dataset.idUnico = p.idUnico;
+      datalist.appendChild(opt);
+    });
+
+    // Forzar actualización visual de las etiquetas en las filas ya existentes
+    document.querySelectorAll(".item-prod").forEach(input => {
+      controlarCambioProducto(input);
+    });
   }
  
   function agregarFilaItem() {
@@ -315,9 +322,7 @@
     
     tr.innerHTML = `
       <td>
-        <select class="item-prod" onchange="verificarKardexLink(this)" style="width:140px;" required>
-          <option value="">Seleccione...</option>
-       </select>
+        <input type="text" list="listaProductos" class="item-prod" placeholder="Escriba o seleccione..." oninput="controlarCambioProducto(this)" style="width:170px;" required>
         <div class="kardex-container"></div>
       </td>
       <td><input type="number" class="item-cant" value="1" min="0.1" step="any" oninput="calcularFila(this)" style="width:60px;" required></td>
@@ -334,23 +339,10 @@
     `;
     
     tbody.appendChild(tr);
-    actualizarDesplegablesProductos();
+    
+    const nuevoInput = tr.querySelector(".item-prod");
+    controlarCambioProducto(nuevoInput);
     calcularTotalesGenerales();
-    // ... Dentro de tu función agregarFilaItem() luego de añadir el HTML a la tabla:
-const nuevaFila = tbody.lastElementChild;
-const nuevoSelect = nuevaFila.querySelector(".item-prod");
-
-if (nuevoSelect) {
-  cargarCatalogoProductos(nuevoSelect);
-  
-  // Forzamos la verificación inicial para que el enlace aparezca de inmediato
-  verificarKardexLink(nuevoSelect); 
-  
-  // Escuchar cuando el usuario cambie de opinión en el selector
-  nuevoSelect.addEventListener("change", function() {
-    verificarKardexLink(this);
-  });
-}
   }
  
   function eliminarFilaItem(btn) {
@@ -362,74 +354,51 @@ if (nuevoSelect) {
       alert("La factura debe tener al menos un ítem detallado.");
     }
   }
- 
-  function actualizarDesplegablesProductos() {
-    const selects = document.querySelectorAll(".item-prod");
-    selects.forEach(sel => {
-      if (sel.options.length <= 1) { // Si no ha sido llenado
-        baseProductos.forEach(p => {
-          let opt = document.createElement("option");
-          opt.value = p.idUnico;
-          opt.textContent = p.descripcion;
-          sel.appendChild(opt);
-        });
-      }
-    });
+
+  function controlarCambioProducto(input) {
+    const container = input.closest("td").querySelector(".kardex-container");
+    if (!container) return;
+
+    const valorDigitado = input.value.trim();
+    
+    // Buscar si lo que el usuario escribió coincide con algún producto existente de la base de datos
+    const productoExiste = baseProductos.find(p => p.descripcion.toLowerCase() === valorDigitado.toLowerCase());
+
+    if (valorDigitado === "") {
+      container.innerHTML = `<br><a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22;">¿No existe? Créalo aquí</a>`;
+    } else if (!productoExiste) {
+      // Si digita a mano un ítem nuevo que NO está en la hoja PRODUCTOSERVICIO (Ej: Almuerzo)
+      container.innerHTML = `<span style="color: #7f8c8d; font-size: 11px; font-style: italic; display:block; margin-top:3px;">Item manual (No Kardex)</span>`;
+      
+      // Desactivamos el checkbox de Kardex automáticamente por seguridad de inventario
+      const fila = input.closest("tr");
+      const checkKardex = fila.querySelector(".item-kardex");
+      if (checkKardex) checkKardex.checked = false;
+    } else {
+      // Si el producto seleccionado o escrito coincide con la base de datos
+      container.innerHTML = `<span style="color: #16a085; font-size: 11px; font-weight: bold; display:block; margin-top:3px;">✓ Registrado [${productoExiste.idUnico}]</span>`;
+    }
   }
- 
-function verificarKardexLink(select) {
-  // Buscamos el contenedor del link dentro de la misma celda o fila correspondiente
-  const container = select.closest("td").querySelector(".kardex-container");
-  if (!container) return;
 
-  // Si el valor es vacío (""), significa que seleccionó la opción inicial
-  if (select.value === "") {
-    container.innerHTML = `<br><a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22; font-weight: bold; font-size: 12px; text-decoration: none;">¿No existe? Créalo aquí</a>`;
-  } else {
-    container.innerHTML = ""; // Si selecciona un producto válido, se oculta el enlace
+  function abrirCreadorProductos() {
+    const ancho = 850;
+    const alto = 600;
+    const izquierda = (screen.width - ancho) / 2;
+    const arriba = (screen.height - alto) / 2;
+    window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
   }
-}
 
-// Nueva función para desplegar la ventana emergente de productos.html de forma centrada
-function abrirCreadorProductos() {
-  const ancho = 850;
-  const alto = 600;
-  const izquierda = (screen.width - ancho) / 2;
-  const arriba = (screen.height - alto) / 2;
-  window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
-}
-
-  // Escuchar el mensaje enviado desde productos.html al registrar un ítem nuevo
+  // Escuchar el mensaje enviado desde productos.html cuando se crea un ítem nuevo en Sheets
   window.addEventListener("message", (event) => {
     if (event.data === "refreshProductos") {
-      console.log("Detectado nuevo producto. Actualizando listas en fcompra...");
+      console.log("Detectado nuevo producto. Sincronizando datalist en fcompra...");
       
-      // Consultar de nuevo los datos iniciales al script de Google sin recargar la página entera
       fetch(`${WEB_APP_URL}?action=getCompraInitData`)
         .then(res => res.json())
         .then(res => {
           if (res.success) {
-            baseProductos = res.data.productos; // Actualiza la memoria local de productos [cite: 44]
-            
-            // Actualizar todos los selectores activos de la tabla manteniendo lo que ya estaba seleccionado
-            const selects = document.querySelectorAll(".item-prod");
-            selects.forEach(sel => {
-              const valorActual = sel.value; // Guardar selección actual del usuario
-              
-              // Limpiar opciones manteniendo únicamente la primera ("Seleccione...")
-              sel.innerHTML = '<option value="">Seleccione...</option>';
-              
-              // Volver a poblar con la lista actualizada desde Sheets
-              baseProductos.forEach(p => {
-                let opt = document.createElement("option");
-                opt.value = p.idUnico;
-                opt.textContent = p.descripcion;
-                sel.appendChild(opt);
-              });
-              
-              sel.value = valorActual; // Restaurar la selección previa del usuario
-              verificarKardexLink(sel); // Actualizar los estados de los links correspondientes
-            });
+            baseProductos = res.data.productos;
+            actualizarDatalistProductos();
           }
         }).catch(err => console.error("Error al actualizar catálogos secundarios:", err));
     }
@@ -473,7 +442,7 @@ function abrirCreadorProductos() {
     
     const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
     
-    // Regla solicitada: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
+    // Regla de cálculo ajustada: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
     const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
     
     document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
@@ -482,12 +451,10 @@ function abrirCreadorProductos() {
     document.getElementById("cantidadGeneral").value = totalItemsCount;
     document.getElementById("totalGeneral").value = Math.round(totalFactura);
     
-    // Calcular porcentajes ponderados visuales para la pestaña EGRESOS
     document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
     document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
   }
  
-  // Interceptar envío de datos
   document.getElementById("compraForm").addEventListener("submit", function(e) {
     e.preventDefault();
     const btn = document.getElementById("btnGuardar");
@@ -511,16 +478,21 @@ function abrirCreadorProductos() {
   function enviarDatosFormulario(base64Data, fileName, fileMime) {
     const items = [];
     document.querySelectorAll(".item-row").forEach(row => {
-      const selectProd = row.querySelector(".item-prod");
-      const descText = selectProd.options[selectProd.selectedIndex].text;
+      const inputProd = row.querySelector(".item-prod");
+      const textoDigitado = inputProd.value.trim();
+      
+      // Buscar correspondencia en los productos cargados
+      const prodEncontrado = baseProductos.find(p => p.descripcion.toLowerCase() === textoDigitado.toLowerCase());
+      
+      // Si existe toma su código, si no, lo envía vacío para identificar que fue una inserción libre
+      const idProducto = prodEncontrado ? prodEncontrado.idUnico : "";
+      
       const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
       const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
-      const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
-      const pIpo = parseFloat(row.querySelector(".item-pipo").value) || 0;
       
       items.push({
-        idProducto: selectProd.value,
-        descripcion: descText,
+        idProducto: idProducto,
+        descripcion: textoDigitado, // Envía el texto exacto (sea manual o autocompletado)
         cantidad: cant,
         valorUnitario: valUnit,
         unidadMedida: row.querySelector(".item-unid").value,
