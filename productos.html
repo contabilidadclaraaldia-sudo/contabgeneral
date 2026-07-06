@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surtecol - Gestión de Productos y Servicios</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --accent: #16a085;
+      --bg: #f5f6fa;
+      --border: #dcdde1;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    h2 {
+      color: var(--primary);
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    .form-inline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+      gap: 15px;
+      align-items: flex-end;
+      background: #eef2f3;
+      padding: 15px;
+      border-radius: 6px;
+      border-left: 4px solid var(--accent);
+      margin-bottom: 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      margin-bottom: 5px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--accent);
+    }
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      padding: 9px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background-color: #117a65;
+    }
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 15px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background-color: #f8f9fa;
+      color: var(--primary);
+      position: sticky;
+      top: 0;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .search-box {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Administrador de Productos y Servicios</h2>
+  
+  <form id="productoForm" class="form-inline">
+    <div class="form-group">
+      <label for="idUnico">ID UNICO (Código) *</label>
+      <input type="text" id="idUnico" placeholder="Ej: PROD-001" required>
+    </div>
+    <div class="form-group">
+      <label for="descripcion">DESCRIPCIÓN *</label>
+      <input type="text" id="descripcion" placeholder="Ej: Alambre de cobre 1/2" required>
+    </div>
+    <button type="submit" class="btn" id="btnGuardar">Agregar Ítem</button>
+  </form>
+
+  <input type="text" id="inputBuscar" class="search-box" placeholder="Filtrar productos existentes por nombre o código..." onkeyup="filtrarTabla()">
+
+  <h3>Ítems en la pestaña PRODUCTOSERVICIO</h3>
+  <div class="table-container">
+    <table id="tablaProductos">
+      <thead>
+        <tr>
+          <th>ID_UNICO (Código)</th>
+          <th>DESCRIPCIÓN</th>
+        </tr>
+      </thead>
+      <tbody id="bodyProductos">
+        <tr>
+          <td colspan="2" style="text-align:center; color:#7f8c8d;">Cargando base de datos...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
+
+  document.addEventListener("DOMContentLoaded", cargarProductosExis);
+
+  // Obtener y listar los productos desde Google Sheets
+  function cargarProductosExis() {
+    fetch(`${WEB_APP_URL}?action=getSoloProductos`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          const tbody = document.getElementById("bodyProductos");
+          tbody.innerHTML = "";
+          if(res.data.length === 0){
+            tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;">No hay registros internos.</td></tr>`;
+            return;
+          }
+          res.data.forEach(p => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td><strong>${p.idUnico}</strong></td><td>${p.descripcion}</td>`;
+            tbody.appendChild(tr);
+          });
+        } else {
+          alert("Error cargando productos: " + res.error);
+        }
+      }).catch(err => console.error("Error cargando productos:", err));
+  }
+
+  // Enviar nuevo producto mediante POST
+  document.getElementById("productoForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    const payload = {
+      action: "crearProductoNuevo",
+      data: {
+        idUnico: document.getElementById("idUnico").value.trim(),
+        descripcion: document.getElementById("descripcion").value.trim()
+      }
+    };
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.result);
+        document.getElementById("productoForm").reset();
+        cargarProductosExis(); // Recargar listado local
+        
+        // Avisar a la ventana padre (fcompra.html) que hay actualizaciones
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage("refreshProductos", "*");
+        }
+      } else {
+        alert("Error: " + res.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error de red al procesar el ítem.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "Agregar Ítem";
+    });
+  });
+
+  // Buscador interactivo en la tabla
+  function filtrarTabla() {
+    const input = document.getElementById("inputBuscar").value.toUpperCase();
+    const rows = document.getElementById("bodyProductos").getElementsByTagName("tr");
+    for (let i = 0; i < rows.length; i++) {
+      const tdId = rows[i].getElementsByTagName("td")[0];
+      const tdDesc = rows[i].getElementsByTagName("td")[1];
+      if (tdId || tdDesc) {
+        const txtId = tdId.textContent || tdId.innerText;
+        const txtDesc = tdDesc.textContent || tdDesc.innerText;
+        if (txtId.toUpperCase().indexOf(input) > -1 || txtDesc.toUpperCase().indexOf(input) > -1) {
+          rows[i].style.display = "";
+        } else {
+          rows[i].style.display = "none";
+        }
+      }
+    }
+  }
+</script>
+</body>
+</html>
