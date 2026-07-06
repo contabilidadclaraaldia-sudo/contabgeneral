@@ -336,6 +336,21 @@
     tbody.appendChild(tr);
     actualizarDesplegablesProductos();
     calcularTotalesGenerales();
+    // ... Dentro de tu función agregarFilaItem() luego de añadir el HTML a la tabla:
+const nuevaFila = tbody.lastElementChild;
+const nuevoSelect = nuevaFila.querySelector(".item-prod");
+
+if (nuevoSelect) {
+  cargarCatalogoProductos(nuevoSelect);
+  
+  // Forzamos la verificación inicial para que el enlace aparezca de inmediato
+  verificarKardexLink(nuevoSelect); 
+  
+  // Escuchar cuando el usuario cambie de opinión en el selector
+  nuevoSelect.addEventListener("change", function() {
+    verificarKardexLink(this);
+  });
+}
   }
  
   function eliminarFilaItem(btn) {
