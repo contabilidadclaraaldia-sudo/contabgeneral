@@ -150,6 +150,9 @@
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
 
+  // Memoria local para almacenar los productos cargados y validar duplicados rápidamente
+  let productosCargados = [];
+
   document.addEventListener("DOMContentLoaded", cargarProductosExis);
 
   // Obtener y listar los productos desde Google Sheets
@@ -160,11 +163,16 @@
         if (res.success) {
           const tbody = document.getElementById("bodyProductos");
           tbody.innerHTML = "";
-          if(res.data.length === 0){
+          
+          // Guardar en la memoria local global
+          productosCargados = res.data || [];
+
+          if(productosCargados.length === 0){
             tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;">No hay registros internos.</td></tr>`;
             return;
           }
-          res.data.forEach(p => {
+          
+          productosCargados.forEach(p => {
             const tr = document.createElement("tr");
             tr.innerHTML = `<td><strong>${p.idUnico}</strong></td><td>${p.descripcion}</td>`;
             tbody.appendChild(tr);
@@ -175,9 +183,22 @@
       }).catch(err => console.error("Error cargando productos:", err));
   }
 
-  // Enviar nuevo producto mediante POST
+  // Enviar nuevo producto mediante POST con validación de ID_UNICO
   document.getElementById("productoForm").addEventListener("submit", function(e) {
     e.preventDefault();
+    
+    const idUnicoInput = document.getElementById("idUnico").value.trim();
+    const descripcionInput = document.getElementById("descripcion").value.trim();
+
+    // 1. Validar en tiempo real si el ID_UNICO ya existe en la lista guardada en caché local
+    const codigoExiste = productosCargados.some(p => p.idUnico.toString().trim().toLowerCase() === idUnicoInput.toLowerCase());
+
+    if (codigoExiste) {
+      alert(`Error: El código "${idUnicoInput}" ya se encuentra registrado en el sistema. Por favor ingrese un ID único diferente.`);
+      document.getElementById("idUnico").focus();
+      return; // Detiene la ejecución para que no envíe la solicitud POST
+    }
+
     const btn = document.getElementById("btnGuardar");
     btn.disabled = true;
     btn.textContent = "Guardando...";
@@ -185,8 +206,8 @@
     const payload = {
       action: "crearProductoNuevo",
       data: {
-        idUnico: document.getElementById("idUnico").value.trim(),
-        descripcion: document.getElementById("descripcion").value.trim()
+        idUnico: idUnicoInput,
+        descripcion: descripcionInput
       }
     };
 
@@ -199,7 +220,7 @@
       if (res.success) {
         alert(res.result);
         document.getElementById("productoForm").reset();
-        cargarProductosExis(); // Recargar listado local
+        cargarProductosExis(); // Recargar listado local y refrescar la caché
         
         // Avisar a la ventana padre (fcompra.html) que hay actualizaciones
         if (window.opener && !window.opener.closed) {
