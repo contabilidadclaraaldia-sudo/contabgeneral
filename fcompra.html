@@ -32,6 +32,16 @@
       padding-bottom: 10px;
       margin-top: 0;
     }
+    .search-box {
+      background-color: #f8f9fa;
+      border: 1px solid var(--border);
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      gap: 15px;
+    }
     .section-title {
       background: #eef2f3;
       padding: 8px 12px;
@@ -92,6 +102,12 @@
     .btn:hover {
       background-color: #117a65;
     }
+    .btn-search {
+      background-color: #34495e;
+    }
+    .btn-search:hover {
+      background-color: #2c3e50;
+    }
     .btn-add {
       background-color: #2980b9;
       margin-top: 10px;
@@ -125,7 +141,7 @@
       color: #7f8c8d;
     }
     .footer-surtecol img {
-      max-width: 110px; /* Reducido de 180px para que sea más pequeño al final de la hoja */
+      max-width: 110px;
       margin-top: 10px;
       display: block;
       margin-left: auto;
@@ -145,7 +161,16 @@
 <div class="container">
   <h2>Registro de Factura de Compra</h2>
   
+  <div class="search-box">
+    <div class="form-group" style="flex: 1;">
+      <label for="buscarNoFactura" style="color: var(--primary); font-weight: bold;">Buscar Factura Existente para Editar / Eliminar</label>
+      <input type="text" id="buscarNoFactura" placeholder="Escriba el No. de Factura exacto...">
+    </div>
+    <button type="button" class="btn btn-search" onclick="buscarFacturaExistente()">Buscar Factura</button>
+  </div>
+  
   <form id="compraForm">
+    <input type="hidden" id="idUnicoGeneral" value="">
     
     <div class="section-title">Información General del Egreso</div>
     <div class="grid-3">
@@ -246,7 +271,9 @@
       </div>
     </div>
  
-    <div style="margin-top: 25px; text-align: right;">
+    <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="btn btn-danger" id="btnEliminar" style="display: none;" onclick="eliminarFacturaCompra()">Eliminar Factura</button>
+      <button type="button" class="btn btn-search" id="btnCancelar" style="display: none;" onclick="limpiarFormularioCompleto()">Cancelar Edición</button>
       <button type="submit" class="btn" id="btnGuardar">Registrar Factura de Compra</button>
     </div>
   </form>
@@ -263,11 +290,11 @@
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
   
   let baseProductos = [];
+  let modoEdicion = false;
  
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById('fecha').valueAsDate = new Date();
+    limpiarFormularioCompleto();
     cargarListasIniciales();
-    agregarFilaItem(); 
   });
 
   function cargarListasIniciales() {
@@ -275,15 +302,14 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          // Llenar select de cuentas PUC
           const selectPuc = document.getElementById("cuentaPuc");
+          selectPuc.innerHTML = '<option value="">Seleccione Cuenta...</option>';
           res.data.puc.forEach(codigo => {
             let opt = document.createElement("option");
             opt.value = codigo; opt.textContent = codigo;
             selectPuc.appendChild(opt);
           });
           
-          // Almacenar y renderizar el datalist global de productos
           baseProductos = res.data.productos;
           actualizarDatalistProductos();
         } else {
@@ -333,7 +359,6 @@
     `;
     
     tbody.appendChild(tr);
-    
     const nuevoInput = tr.querySelector(".item-prod");
     controlarCambioProducto(nuevoInput);
     calcularTotalesGenerales();
@@ -378,7 +403,6 @@
 
   window.addEventListener("message", (event) => {
     if (event.data === "refreshProductos") {
-      console.log("Detectado nuevo producto. Sincronizando datalist en fcompra...");
       fetch(`${WEB_APP_URL}?action=getCompraInitData`)
         .then(res => res.json())
         .then(res => {
@@ -428,7 +452,7 @@
     
     const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
     
-    // Regla de cálculo: SUBTOTAL + IVA + IPOCONSUMO + OTROS DESCUENTOS
+    // Suma de otros cargos/descuentos según la regla configurada en Surtecol
     const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
     
     document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
@@ -437,9 +461,151 @@
     document.getElementById("cantidadGeneral").value = totalItemsCount;
     document.getElementById("totalGeneral").value = Math.round(totalFactura);
     
-    // Se actualizan los inputs ocultos para que viajen los valores correctos al backend
     document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
     document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
+  }
+
+  // FUNCIÓN DE BÚSQUEDA INTEGRADA SÍNCRONA
+  function buscarFacturaExistente() {
+    const noFact = document.getElementById("buscarNoFactura").value.trim();
+    if (!noFact) {
+      alert("Por favor ingrese el número de factura que desea buscar.");
+      return;
+    }
+
+    fetch(`${WEB_APP_URL}?action=buscarCompra&noFactura=${encodeURIComponent(noFact)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          const f = res.data;
+          
+          modoEdicion = true;
+          document.getElementById("idUnicoGeneral").value = f.idUnico || "";
+          document.getElementById("noFactura").value = f.noFactura;
+          document.getElementById("noFactura").readOnly = true; // No permitir alterar llave primaria en edición
+          
+          document.getElementById("nit").value = f.nit || "";
+          document.getElementById("razonSocial").value = f.razonSocial || "";
+          document.getElementById("direccion").value = f.direccion || "";
+          document.getElementById("comprador").value = f.comprador || "";
+          document.getElementById("descripcionGeneral").value = f.descripcionGeneral || "";
+          document.getElementById("cuentaPuc").value = f.cuentaPuc || "";
+          document.getElementById("otrosDescuentos").value = f.otrosDescuentos || 0;
+          
+          if (f.fecha) {
+            // Formatear fecha yyyy-mm-dd para el input HTML
+            const f limpia = f.fecha.split("T")[0];
+            document.getElementById("fecha").value = flimpia;
+          }
+
+          // Cargar Ítems detallados devueltos por el backend
+          const tbody = document.getElementById("bodyItems");
+          tbody.innerHTML = "";
+
+          if (f.items && f.items.length > 0) {
+            f.items.forEach(item => {
+              const tr = document.createElement("tr");
+              tr.className = "item-row";
+              
+              // Calcular los porcentajes correspondientes de forma inversa si vienen solo valores planos
+              const subtotalItem = item.cantidad * item.valorUnitario;
+              const pIva = subtotalItem > 0 ? (item.ivaItem / subtotalItem) * 100 : 0;
+              const pIpo = subtotalItem > 0 ? (item.ipoconsumoItem / subtotalItem) * 100 : 0;
+
+              tr.innerHTML = `
+                <td>
+                  <input type="text" list="listaProductos" class="item-prod" value="${item.descripcion || ''}" oninput="controlarCambioProducto(this)" style="width:170px;" required>
+                  <div class="kardex-container"></div>
+                </td>
+                <td><input type="number" class="item-cant" value="${item.cantidad}" min="0.1" step="any" oninput="calcularFila(this)" style="width:60px;" required></td>
+                <td><input type="number" class="item-val" value="${item.valorUnitario}" min="0" step="any" oninput="calcularFila(this)" style="width:90px;" required></td>
+                <td><input type="text" class="item-unid" value="${item.unidadMedida || 'UNIDAD'}" style="width:70px;"></td>
+                <td><input type="number" class="item-piva" value="${pIva.toFixed(1)}" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
+                <td><input type="number" class="item-pipo" value="${pIpo.toFixed(1)}" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
+                <td><input type="number" class="item-otros" value="${item.otrosItem || 0}" min="0" step="any" oninput="calcularFila(this)" style="width:50px;"></td>
+                <td style="text-align:center;"><input type="checkbox" class="item-kardex" ${item.incluirKardex ? 'checked' : ''} value="true"></td>
+                <td><button type="button" class="btn btn-danger" onclick="eliminarFilaItem(this)">X</button></td>
+                <input type="hidden" class="item-tot" value="${item.valorTotalItem}">
+                <input type="hidden" class="item-viva" value="${item.ivaItem}">
+                <input type="hidden" class="item-vipo" value="${item.ipoconsumoItem}">
+              `;
+              tbody.appendChild(tr);
+              controlarCambioProducto(tr.querySelector(".item-prod"));
+            });
+          } else {
+            agregarFilaItem();
+          }
+
+          calcularTotalesGenerales();
+
+          // Configurar botones visuales
+          document.getElementById("btnEliminar").style.display = "inline-block";
+          document.getElementById("btnCancelar").style.display = "inline-block";
+          document.getElementById("btnGuardar").textContent = "Actualizar Factura de Compra";
+          document.getElementById("btnGuardar").style.backgroundColor = "#2980b9";
+        } else {
+          alert("No se encontró ninguna factura de compra con el número: " + noFact);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error de comunicación buscando la factura.");
+      });
+  }
+
+  // FUNCIÓN PARA ELIMINAR LA FACTURA ASENTADA EN HOJAS COMPLETAS
+  function eliminarFacturaCompra() {
+    const noFact = document.getElementById("noFactura").value;
+    if (!noFact) return;
+
+    if (!confirm(`¿Está completamente seguro de eliminar la factura de compra No. ${noFact}? Esta acción afectará las pestañas EGRESOS, DETALLE y KARDEX de manera definitiva.`)) {
+      return;
+    }
+
+    const btnEliminar = document.getElementById("btnEliminar");
+    btnEliminar.disabled = true;
+    btnEliminar.textContent = "Eliminando...";
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "eliminarCompra", noFactura: noFact })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert("Factura de compra eliminada exitosamente en todas las hojas.");
+        limpiarFormularioCompleto();
+      } else {
+        alert("Error al eliminar: " + res.error);
+        btnEliminar.disabled = false;
+        btnEliminar.textContent = "Eliminar Factura";
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error en red al procesar la eliminación de la factura.");
+      btnEliminar.disabled = false;
+      btnEliminar.textContent = "Eliminar Factura";
+    });
+  }
+
+  function limpiarFormularioCompleto() {
+    modoEdicion = false;
+    document.getElementById("compraForm").reset();
+    document.getElementById("idUnicoGeneral").value = "";
+    document.getElementById("noFactura").readOnly = false;
+    document.getElementById("buscarNoFactura").value = "";
+    
+    document.getElementById("bodyItems").innerHTML = "";
+    agregarFilaItem();
+    
+    document.getElementById("fecha").valueAsDate = new Date();
+    
+    // Restablecer estados visuales de los controles de envío
+    document.getElementById("btnEliminar").style.display = "none";
+    document.getElementById("btnCancelar").style.display = "none";
+    document.getElementById("btnGuardar").textContent = "Registrar Factura de Compra";
+    document.getElementById("btnGuardar").style.backgroundColor = "var(--accent)";
   }
  
   document.getElementById("compraForm").addEventListener("submit", function(e) {
@@ -479,7 +645,7 @@
         descripcion: textoDigitado,
         cantidad: cant,
         valorUnitario: valUnit,
-        columnas: row.querySelector(".item-unid").value,
+        unidadMedida: row.querySelector(".item-unid").value,
         ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
         ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
         otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
@@ -489,8 +655,10 @@
     });
  
     const payload = {
-      action: "crearCompra",
+      // Determina la acción de POST condicionalmente según el estado del formulario
+      action: modoEdicion ? "editarCompra" : "crearCompra",
       data: {
+        idUnico: document.getElementById("idUnicoGeneral").value,
         noFactura: document.getElementById("noFactura").value,
         nit: document.getElementById("nit").value,
         razonSocial: document.getElementById("razonSocial").value,
@@ -522,11 +690,8 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        alert(res.result);
-        document.getElementById("compraForm").reset();
-        document.getElementById("bodyItems").innerHTML = "";
-        agregarFilaItem();
-        document.getElementById('fecha').valueAsDate = new Date();
+        alert(res.result || "Operación procesada con éxito.");
+        limpiarFormularioCompleto();
       } else {
         alert("Error de procesamiento: " + res.error);
       }
@@ -538,7 +703,7 @@
     .finally(() => {
       const btn = document.getElementById("btnGuardar");
       btn.disabled = false;
-      btn.textContent = "Registrar Factura de Compra";
+      btn.textContent = modoEdicion ? "Actualizar Factura de Compra" : "Registrar Factura de Compra";
     });
   }
 </script>
