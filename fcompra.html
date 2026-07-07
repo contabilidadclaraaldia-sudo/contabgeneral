@@ -92,6 +92,12 @@
     .btn:hover {
       background-color: #117a65;
     }
+    .btn-search {
+      background-color: #34495e;
+    }
+    .btn-search:hover {
+      background-color: #2c3e50;
+    }
     .btn-add {
       background-color: #2980b9;
       margin-top: 10px;
@@ -105,6 +111,12 @@
     }
     .btn-danger:hover {
       background-color: #962d22;
+    }
+    .btn-print {
+      background-color: #8e44ad;
+    }
+    .btn-print:hover {
+      background-color: #713391;
     }
     .kardex-link {
       font-size: 11px;
@@ -138,12 +150,26 @@
       margin-top: 20px;
       border-radius: 4px;
     }
+    .input-btn-group {
+      display: flex;
+      gap: 5px;
+    }
+    .input-btn-group input {
+      flex: 1;
+    }
+    @media print {
+      body { background-color: #fff; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .btn, .btn-add, .btn-danger, .btn-search, .footer-surtecol, .section-actions, th:last-child, td:last-child { display: none !important; }
+      input, select, textarea { border: none !important; background: transparent !important; padding: 0 !important; font-size: 14px; color: #000; -webkit-appearance: none; }
+      .section-title { border-left: 4px solid #333; background: #ddd !important; -webkit-print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Registro de Factura de Compra</h2>
+  <h2>Gestión de Facturas de Compra</h2>
    
   <form id="compraForm">
    
@@ -151,7 +177,10 @@
     <div class="grid-3">
       <div class="form-group">
         <label for="noFactura">No. FACTURA *</label>
-        <input type="text" id="noFactura" required>
+        <div class="input-btn-group">
+          <input type="text" id="noFactura" required>
+          <button type="button" class="btn btn-search" onclick="buscarFacturaCompra()">Buscar</button>
+        </div>
       </div>
       <div class="form-group">
         <label for="nit">NIT Proveedor *</label>
@@ -190,6 +219,7 @@
       <div class="form-group">
         <label for="archivoAdjunto">Adjuntar Factura (PDF / JPG)</label>
         <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png, .zip">
+        <span id="txtArchivoPrevio" style="font-size:12px; color:#2980b9; margin-top:5px; font-style:italic;"></span>
       </div>
     </div>
  
@@ -244,7 +274,9 @@
       </div>
     </div>
  
-    <div style="margin-top: 25px; text-align: right;">
+    <div style="margin-top: 25px; text-align: right;" class="section-actions">
+      <button type="button" class="btn btn-print" id="btnImprimir" onclick="window.print()" style="display:none; margin-right:10px;">Imprimir</button>
+      <button type="button" class="btn btn-danger" id="btnEliminar" onclick="eliminarFacturaCompra()" style="display:none; margin-right:10px;">Borrar Factura</button>
       <button type="submit" class="btn" id="btnGuardar">Registrar Factura de Compra</button>
     </div>
   </form>
@@ -262,6 +294,7 @@
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
   
   let baseProductos = [];
+  let esModoEdicion = false;
  
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('fecha').valueAsDate = new Date();
@@ -284,7 +317,9 @@
           baseProductos = res.data.productos;
           actualizarDatalistProductos();
 
-          agregarFilaItem(); 
+          if(!esModoEdicion) {
+            agregarFilaItem(); 
+          }
         } else {
           alert("Error cargando listas de configuración: " + res.error);
         }
@@ -308,7 +343,7 @@
     });
   }
  
-  function agregarFilaItem() {
+  function agregarFilaItem(valoresPredefinidos = null) {
     const tbody = document.getElementById("bodyItems");
     const tr = document.createElement("tr");
     tr.className = "item-row";
@@ -333,9 +368,26 @@
     
     tbody.appendChild(tr);
     
+    if (valoresPredefinidos) {
+      tr.querySelector(".item-prod").value = valoresPredefinidos.descripcion || "";
+      tr.querySelector(".item-cant").value = valoresPredefinidos.cantidad || 1;
+      tr.querySelector(".item-val").value = valoresPredefinidos.valorUnitario || 0;
+      tr.querySelector(".item-unid").value = valoresPredefinidos.unidadMedida || "UNIDAD";
+      
+      // Calcular porcentajes revertidos de los valores guardados
+      const sub = valoresPredefinidos.cantidad * valoresPredefinidos.valorUnitario;
+      const pIva = sub > 0 ? ((valoresPredefinidos.ivaItem / sub) * 100).toFixed(1) : 0;
+      const pIpo = sub > 0 ? ((valoresPredefinidos.ipoconsumoItem / sub) * 100).toFixed(1) : 0;
+      
+      tr.querySelector(".item-piva").value = pIva;
+      tr.querySelector(".item-pipo").value = pIpo;
+      tr.querySelector(".item-otros").value = valoresPredefinidos.otrosItem || 0;
+      tr.querySelector(".item-kardex").checked = valoresPredefinidos.incluirKardex === true || valoresPredefinidos.incluirKardex === "true";
+    }
+
     const nuevoInput = tr.querySelector(".item-prod");
     controlarCambioProducto(nuevoInput);
-    calcularTotalesGenerales();
+    calcularFila(nuevoInput);
   }
  
   function eliminarFilaItem(btn) {
@@ -353,7 +405,6 @@
     if (!container) return;
 
     const valorDigitado = input.value.trim();
-    
     if (!baseProductos || baseProductos.length === 0) {
       container.innerHTML = "";
       return;
@@ -373,23 +424,17 @@
     }
   }
 
-  // AJUSTADO: Envía correctamente el parámetro 'factura' y apunta exactamente a 'productos.html'
   function abrirCreadorProductos() {
     const ancho = 850;
     const alto = 600;
     const izquierda = (screen.width - ancho) / 2;
     const arriba = (screen.height - alto) / 2;
-    
-    // Captura el número de la factura actual
     const nFactura = document.getElementById("noFactura").value.trim();
-    
-    // Llama al archivo correcto pasando el dato en la URL (?factura=VALOR)
     window.open(`productos.html?factura=${encodeURIComponent(nFactura)}`, "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
   }
 
   window.addEventListener("message", (event) => {
     if (event.data === "refreshProductos") {
-      console.log("Detectado nuevo producto. Sincronizando datalist en fcompra...");
       fetch(`${WEB_APP_URL}?action=getCompraInitData`)
         .then(res => res.json())
         .then(res => {
@@ -403,6 +448,7 @@
   
   function calcularFila(input) {
     const row = input.closest("tr");
+    if(!row) return;
     const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
     const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
     const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
@@ -448,6 +494,125 @@
     
     document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
     document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
+  }
+
+  // NUEVA FUNCIÓN: Buscar Factura Existente
+  function buscarFacturaCompra() {
+    const noFactura = document.getElementById("noFactura").value.trim();
+    if (!noFactura) {
+      alert("Por favor digite un número de factura para buscar.");
+      return;
+    }
+
+    document.getElementById("bodyItems").innerHTML = "<tr><td colspan='9' style='text-align:center;'>Buscando información...</td></tr>";
+
+    fetch(`${WEB_APP_URL}?action=buscarCompraFactura&noFactura=${encodeURIComponent(noFactura)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          const comp = res.data;
+          esModoEdicion = true;
+
+          // Asignar Cabecera
+          document.getElementById("nit").value = comp.nit || "";
+          document.getElementById("razonSocial").value = comp.razonSocial || "";
+          document.getElementById("direccion").value = comp.direccion || "";
+          document.getElementById("comprador").value = comp.comprador || "";
+          document.getElementById("descripcionGeneral").value = comp.descripcionGeneral || "";
+          document.getElementById("cuentaPuc").value = comp.cuentaPuc || "";
+          document.getElementById("otrosDescuentos").value = comp.otrosDescuentos || 0;
+
+          if (comp.fecha) {
+            const fParts = comp.fecha.split("/");
+            if(fParts.length === 3) {
+              document.getElementById("fecha").value = `${fParts[2]}-${fParts[1]}-${fParts[0]}`;
+            } else {
+              document.getElementById("fecha").value = comp.fecha;
+            }
+          }
+
+          if(comp.urlArchivo) {
+            document.getElementById("txtArchivoPrevio").innerHTML = `<a href="${comp.urlArchivo}" target="_blank">✓ Ver Archivo Adjunto Original</a>`;
+          } else {
+            document.getElementById("txtArchivoPrevio").innerHTML = "Sin archivo previamente adjuntado.";
+          }
+
+          // Renderizar los Items de la factura
+          document.getElementById("bodyItems").innerHTML = "";
+          if (comp.items && comp.items.length > 0) {
+            comp.items.forEach(item => agregarFilaItem(item));
+          } else {
+            agregarFilaItem();
+          }
+
+          // Mostrar botones avanzados
+          document.getElementById("btnEliminar").style.display = "inline-block";
+          document.getElementById("btnImprimir").style.display = "inline-block";
+          document.getElementById("btnGuardar").textContent = "Actualizar Factura de Compra";
+          alert("Factura cargada correctamente para edición/impresión.");
+        } else {
+          alert("La factura especificada no existe. Puede registrarla como nueva.");
+          limpiarFormularioCompleto();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error de red intentando ubicar la factura.");
+        limpiarFormularioCompleto();
+      });
+  }
+
+  // NUEVA FUNCIÓN: Eliminar Factura en Cadena
+  function eliminarFacturaCompra() {
+    const noFactura = document.getElementById("noFactura").value.trim();
+    if (!noFactura) return;
+
+    if (!confirm(`¿ESTÁ COMPLETAMENTE SEGURO de eliminar la factura [${noFactura}]?\nEsta acción borrará de forma irreversible sus registros en las pestañas EGRESOS, DETALLE y KARDEX.`)) {
+      return;
+    }
+
+    const btn = document.getElementById("btnEliminar");
+    btn.disabled = true;
+    btn.textContent = "Eliminando...";
+
+    const payload = {
+      action: "eliminarCompraCompleta",
+      noFactura: noFactura
+    };
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.result);
+        limpiarFormularioCompleto();
+      } else {
+        alert("Error al eliminar registros: " + res.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error crítico comunicando el borrado definitivo.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "Borrar Factura";
+    });
+  }
+
+  function limpiarFormularioCompleto() {
+    document.getElementById("compraForm").reset();
+    document.getElementById("bodyItems").innerHTML = "";
+    document.getElementById("txtArchivoPrevio").innerHTML = "";
+    esModoEdicion = false;
+    document.getElementById("btnEliminar").style.display = "none";
+    document.getElementById("btnImprimir").style.display = "none";
+    document.getElementById("btnGuardar").textContent = "Registrar Factura de Compra";
+    agregarFilaItem();
+    document.getElementById('fecha').valueAsDate = new Date();
   }
  
   document.getElementById("compraForm").addEventListener("submit", function(e) {
@@ -496,8 +661,9 @@
       });
     });
  
+    // Si estamos editando, mandamos la acción "editarCompra" en vez de crear
     const payload = {
-      action: "crearCompra",
+      action: esModoEdicion ? "editarCompraCompleta" : "crearCompra",
       data: {
         noFactura: document.getElementById("noFactura").value,
         nit: document.getElementById("nit").value,
@@ -531,10 +697,7 @@
     .then(res => {
       if (res.success) {
         alert(res.result);
-        document.getElementById("compraForm").reset();
-        document.getElementById("bodyItems").innerHTML = "";
-        agregarFilaItem();
-        document.getElementById('fecha').valueAsDate = new Date();
+        limpiarFormularioCompleto();
       } else {
         alert("Error de procesamiento: " + res.error);
       }
@@ -546,7 +709,11 @@
     .finally(() => {
       const btn = document.getElementById("btnGuardar");
       btn.disabled = false;
-      btn.textContent = "Registrar Factura de Compra";
+      if(!esModoEdicion) {
+        btn.textContent = "Registrar Factura de Compra";
+      } else {
+        btn.textContent = "Actualizar Factura de Compra";
+      }
     });
   }
 </script>
