@@ -118,6 +118,38 @@
       gap: 10px;
     }
 
+    /* === Sección de consulta de conteos ya guardados === */
+    .container-consulta {
+      width: 100%;
+      max-width: 1000px;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      box-sizing: border-box;
+      margin-top: 25px;
+    }
+    .reporte-conteo-header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 3px double #000;
+      padding-bottom: 10px;
+      display: none;
+    }
+    .reporte-conteo-header h3 { margin: 0 0 5px 0; font-size: 20px; text-transform: uppercase; }
+    .reporte-conteo-header p { margin: 3px 0; color: #5f6368; font-size: 13px; }
+    tfoot td { font-weight: bold; background-color: #f1f3f4; border-top: 2px solid var(--primary); }
+    td.diferencia-positiva { color: var(--success); font-weight: bold; }
+    td.diferencia-negativa { color: var(--danger); font-weight: bold; }
+
+    @media print {
+      body { background: white; padding: 0; margin: 0; }
+      .container, .surtecol-footer, .toolbar, #btnImprimirConteo, .info-nota, #tituloConsulta { display: none !important; }
+      .container-consulta { box-shadow: none !important; padding: 0; max-width: 100%; }
+      .reporte-conteo-header { display: block !important; }
+      #resultadoConteo { display: block !important; }
+    }
+
     /* === ESTILOS PARA EL PIE DE PÁGINA CENTRADO DE SURTECOL === */
     .surtecol-footer {
       width: 100%;
@@ -174,6 +206,50 @@
 
   <div class="barra-guardar">
     <button type="button" class="btn" id="btnGuardar" onclick="guardarConteo()">Guardar Conteo</button>
+  </div>
+</div>
+
+<div class="container-consulta">
+  <h2 id="tituloConsulta">Consultar Conteos Realizados</h2>
+  <p class="info-nota">Selecciona la fecha de un conteo ya guardado para ver los saldos (Total del sistema, Cantidad Física y Diferencia) registrados ese día, y opcionalmente imprimirlo.</p>
+
+  <div class="toolbar">
+    <select id="selectConteo" class="search-box">
+      <option value="">Cargando fechas de conteo...</option>
+    </select>
+    <button type="button" class="btn" onclick="verConteoSeleccionado()">Ver Conteo</button>
+    <button type="button" class="btn btn-secundario" id="btnImprimirConteo" style="display:none;" onclick="window.print()">Imprimir</button>
+  </div>
+
+  <div class="reporte-conteo-header" id="reporteConteoHeader">
+    <h3>Conteo Físico de Inventario</h3>
+    <p id="reporteConteoFecha">Fecha del conteo: -</p>
+    <p style="font-style: italic;">Generado el: <span id="reporteConteoEmision"></span></p>
+  </div>
+
+  <div id="resultadoConteo" style="display:none;">
+    <div class="table-container">
+      <table id="tablaResultadoConteo">
+        <thead>
+          <tr>
+            <th>ID_UNICO</th>
+            <th>DESCRIPCIÓN</th>
+            <th class="numerico">TOTAL SISTEMA</th>
+            <th class="numerico">CANTIDAD FÍSICA</th>
+            <th class="numerico">DIFERENCIA</th>
+          </tr>
+        </thead>
+        <tbody id="bodyResultadoConteo"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">TOTALES</td>
+            <td class="numerico" id="totalSistemaConteo">0.00</td>
+            <td class="numerico" id="totalFisicaConteo">0.00</td>
+            <td class="numerico" id="totalDiferenciaConteo">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -307,6 +383,92 @@
       const texto = filas[i].textContent || filas[i].innerText;
       filas[i].style.display = texto.toUpperCase().indexOf(filtro) > -1 ? "" : "none";
     }
+  }
+
+  // ===========================================================================
+  // Consulta e impresión de conteos ya guardados
+  // ===========================================================================
+
+  document.addEventListener("DOMContentLoaded", cargarListaConteos);
+
+  function cargarListaConteos() {
+    const select = document.getElementById("selectConteo");
+    fetch(`${WEB_APP_URL}?action=listarConteosInventario`)
+      .then(res => res.json())
+      .then(res => {
+        select.innerHTML = "";
+        if (res.success && res.data && res.data.length > 0) {
+          const optDefault = document.createElement("option");
+          optDefault.value = "";
+          optDefault.textContent = "Selecciona una fecha de conteo...";
+          select.appendChild(optDefault);
+
+          res.data.forEach(item => {
+            const opt = document.createElement("option");
+            opt.value = item.columna;
+            opt.textContent = item.fecha;
+            select.appendChild(opt);
+          });
+        } else {
+          select.innerHTML = `<option value="">Aún no hay conteos guardados</option>`;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        select.innerHTML = `<option value="">Error al cargar las fechas</option>`;
+      });
+  }
+
+  function verConteoSeleccionado() {
+    const select = document.getElementById("selectConteo");
+    const columna = select.value;
+
+    if (!columna) {
+      return alert("Selecciona primero una fecha de conteo.");
+    }
+
+    fetch(`${WEB_APP_URL}?action=consultarConteoInventario&columna=${encodeURIComponent(columna)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          renderizarConteo(res.data);
+        } else {
+          alert("Error al consultar el conteo: " + res.error);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error de red al consultar el conteo.");
+      });
+  }
+
+  function renderizarConteo(datos) {
+    const tbody = document.getElementById("bodyResultadoConteo");
+    tbody.innerHTML = "";
+
+    datos.filas.forEach(fila => {
+      const tr = document.createElement("tr");
+      const claseDif = fila.diferencia > 0 ? "diferencia-positiva" : (fila.diferencia < 0 ? "diferencia-negativa" : "");
+      tr.innerHTML = `
+        <td>${fila.idUnico}</td>
+        <td>${fila.descripcion || ''}</td>
+        <td class="numerico">${formatNumero(fila.total)}</td>
+        <td class="numerico">${formatNumero(fila.cantidadFisica)}</td>
+        <td class="numerico ${claseDif}">${formatNumero(fila.diferencia)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("totalSistemaConteo").textContent = formatNumero(datos.totales.totalSistema);
+    document.getElementById("totalFisicaConteo").textContent = formatNumero(datos.totales.totalFisica);
+    document.getElementById("totalDiferenciaConteo").textContent = formatNumero(datos.totales.totalDiferencia);
+
+    document.getElementById("reporteConteoFecha").textContent = "Fecha del conteo: " + datos.fecha;
+    document.getElementById("reporteConteoEmision").textContent = new Date().toLocaleString();
+
+    document.getElementById("reporteConteoHeader").style.display = "block";
+    document.getElementById("resultadoConteo").style.display = "block";
+    document.getElementById("btnImprimirConteo").style.display = "inline-block";
   }
 </script>
 </body>
