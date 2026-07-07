@@ -184,7 +184,7 @@
       </div>
       <div class="form-group">
         <label for="nit">NIT Proveedor *</label>
-        <input type="text" id="nit" required>
+        <input type="text" id="nit" onblur="autocompletarProveedor()" required>
       </div>
       <div class="form-group">
         <label for="razonSocial">Razón Social *</label>
@@ -197,6 +197,18 @@
       <div class="form-group">
         <label for="direccion">Dirección *</label>
         <input type="text" id="direccion" required>
+      </div>
+      <div class="form-group">
+        <label for="ciudad">Ciudad *</label>
+        <input type="text" id="ciudad" required>
+      </div>
+      <div class="form-group">
+        <label for="correo">Correo Electrónico *</label>
+        <input type="email" id="correo" required>
+      </div>
+      <div class="form-group">
+        <label for="telefono">Teléfono *</label>
+        <input type="text" id="telefono" required>
       </div>
       <div class="form-group">
         <label for="comprador">Comprador *</label>
@@ -374,7 +386,6 @@
       tr.querySelector(".item-val").value = valoresPredefinidos.valorUnitario || 0;
       tr.querySelector(".item-unid").value = valoresPredefinidos.unidadMedida || "UNIDAD";
       
-      // Calcular porcentajes revertidos de los valores guardados
       const sub = valoresPredefinidos.cantidad * valoresPredefinidos.valorUnitario;
       const pIva = sub > 0 ? ((valoresPredefinidos.ivaItem / sub) * 100).toFixed(1) : 0;
       const pIpo = sub > 0 ? ((valoresPredefinidos.ipoconsumoItem / sub) * 100).toFixed(1) : 0;
@@ -496,7 +507,25 @@
     document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
   }
 
-  // NUEVA FUNCIÓN: Buscar Factura Existente
+  // FUNCIÓN INTEGRADA: Autocompletar proveedor por NIT
+  function autocompletarProveedor() {
+    const nitValue = document.getElementById("nit").value.trim();
+    if (!nitValue || esModoEdicion) return;
+
+    fetch(`${WEB_APP_URL}?action=buscarProveedorPorNit&nit=${encodeURIComponent(nitValue)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          document.getElementById("razonSocial").value = res.data.razonSocial || "";
+          document.getElementById("direccion").value = res.data.direccion || "";
+          document.getElementById("ciudad").value = res.data.ciudad || "";
+          document.getElementById("correo").value = res.data.correo || "";
+          document.getElementById("telefono").value = res.data.telefono || "";
+        }
+      })
+      .catch(err => console.error("Error al autocompletar proveedor: ", err));
+  }
+
   function buscarFacturaCompra() {
     const noFactura = document.getElementById("noFactura").value.trim();
     if (!noFactura) {
@@ -513,10 +542,12 @@
           const comp = res.data;
           esModoEdicion = true;
 
-          // Asignar Cabecera
           document.getElementById("nit").value = comp.nit || "";
           document.getElementById("razonSocial").value = comp.razonSocial || "";
           document.getElementById("direccion").value = comp.direccion || "";
+          document.getElementById("ciudad").value = comp.ciudad || "";
+          document.getElementById("correo").value = comp.correo || "";
+          document.getElementById("telefono").value = comp.telefono || "";
           document.getElementById("comprador").value = comp.comprador || "";
           document.getElementById("descripcionGeneral").value = comp.descripcionGeneral || "";
           document.getElementById("cuentaPuc").value = comp.cuentaPuc || "";
@@ -537,7 +568,6 @@
             document.getElementById("txtArchivoPrevio").innerHTML = "Sin archivo previamente adjuntado.";
           }
 
-          // Renderizar los Items de la factura
           document.getElementById("bodyItems").innerHTML = "";
           if (comp.items && comp.items.length > 0) {
             comp.items.forEach(item => agregarFilaItem(item));
@@ -545,7 +575,6 @@
             agregarFilaItem();
           }
 
-          // Mostrar botones avanzados
           document.getElementById("btnEliminar").style.display = "inline-block";
           document.getElementById("btnImprimir").style.display = "inline-block";
           document.getElementById("btnGuardar").textContent = "Actualizar Factura de Compra";
@@ -562,7 +591,6 @@
       });
   }
 
-  // NUEVA FUNCIÓN: Eliminar Factura en Cadena
   function eliminarFacturaCompra() {
     const noFactura = document.getElementById("noFactura").value.trim();
     if (!noFactura) return;
@@ -652,6 +680,7 @@
         descripcion: textoDigitado,
         cantidad: cant,
         valorUnitario: valUnit,
+        disabled: false,
         unidadMedida: row.querySelector(".item-unid").value,
         ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
         ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
@@ -661,7 +690,6 @@
       });
     });
  
-    // Si estamos editando, mandamos la acción "editarCompra" en vez de crear
     const payload = {
       action: esModoEdicion ? "editarCompraCompleta" : "crearCompra",
       data: {
@@ -670,6 +698,9 @@
         razonSocial: document.getElementById("razonSocial").value,
         fecha: document.getElementById("fecha").value,
         direccion: document.getElementById("direccion").value,
+        ciudad: document.getElementById("ciudad").value,
+        correo: document.getElementById("correo").value,
+        telefono: document.getElementById("telefono").value,
         comprador: document.getElementById("comprador").value,
         descripcionGeneral: document.getElementById("descripcionGeneral").value,
         cuentaPuc: document.getElementById("cuentaPuc").value,
