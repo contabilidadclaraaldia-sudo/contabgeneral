@@ -218,7 +218,7 @@
         <label for="subtotalGeneral">Subtotal Consolidado</label>
         <input type="number" id="subtotalGeneral" value="0" readonly>
       </div>
-      
+       
       <input type="hidden" id="porcentajeIva" value="0">
       <input type="hidden" id="porcentajeIpoconsumo" value="0">
 
@@ -273,7 +273,6 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          // Llenar datalist de cuentas PUC (Estructura de Combobox libre)
           const datalistPuc = document.getElementById("listaPuc");
           datalistPuc.innerHTML = "";
           res.data.puc.forEach(codigo => {
@@ -282,11 +281,9 @@
             datalistPuc.appendChild(opt);
           });
           
-          // Almacenar y renderizar el datalist global de productos
           baseProductos = res.data.productos;
           actualizarDatalistProductos();
 
-          // CORRECCIÓN: Agregar la primera fila vacía SÓLO cuando los datos remotos ya existan
           agregarFilaItem(); 
         } else {
           alert("Error cargando listas de configuración: " + res.error);
@@ -357,7 +354,6 @@
 
     const valorDigitado = input.value.trim();
     
-    // Protección por si la función es llamada antes de que termine el fetch
     if (!baseProductos || baseProductos.length === 0) {
       container.innerHTML = "";
       return;
@@ -377,12 +373,18 @@
     }
   }
 
+  // AJUSTADO: Envía correctamente el parámetro 'factura' y apunta exactamente a 'productos.html'
   function abrirCreadorProductos() {
     const ancho = 850;
     const alto = 600;
     const izquierda = (screen.width - ancho) / 2;
     const arriba = (screen.height - alto) / 2;
-    window.open("productos.html", "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
+    
+    // Captura el número de la factura actual
+    const nFactura = document.getElementById("noFactura").value.trim();
+    
+    // Llama al archivo correcto pasando el dato en la URL (?factura=VALOR)
+    window.open(`productos.html?factura=${encodeURIComponent(nFactura)}`, "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
   }
 
   window.addEventListener("message", (event) => {
@@ -436,8 +438,6 @@
     });
     
     const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
-    
-    // Ajustado: SUMA los otros cargos/descuentos al total general según reglas comerciales vigentes
     const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
     
     document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
@@ -487,7 +487,7 @@
         descripcion: textoDigitado,
         cantidad: cant,
         valorUnitario: valUnit,
-        unidadMedida: row.querySelector(".item-unid").value, // Mapeado a 'unidadMedida' para emparejar con CompraService.gs
+        unidadMedida: row.querySelector(".item-unid").value,
         ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
         ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
         otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
