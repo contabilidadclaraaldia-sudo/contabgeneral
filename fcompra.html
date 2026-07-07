@@ -144,9 +144,9 @@
 
 <div class="container">
   <h2>Registro de Factura de Compra</h2>
-  
+   
   <form id="compraForm">
-    
+   
     <div class="section-title">Información General del Egreso</div>
     <div class="grid-3">
       <div class="form-group">
@@ -181,10 +181,8 @@
         <input type="text" id="descripcionGeneral" placeholder="Ej: Compra de alimentos, papelería, etc." required>
       </div>
       <div class="form-group">
-        <label for="cuentaPuc">Cuenta PUC *</label>
-        <select id="cuentaPuc" required>
-          <option value="">Seleccione Cuenta...</option>
-       </select>
+        <label for="cuentaPuc">Cuenta PUC</label>
+        <input type="text" id="cuentaPuc" list="listaPuc" placeholder="Escriba o seleccione Cuenta...">
       </div>
     </div>
  
@@ -258,6 +256,7 @@
 </div>
 
 <datalist id="listaProductos"></datalist>
+<datalist id="listaPuc"></datalist>
  
 <script>
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxv3D9yr_dxUbbw2t5zAjdpNPsZmWswd3pJWzYSFsvDvhMSuPmoGKuUBqly3U2UKAsg/exec";
@@ -274,12 +273,13 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          // Llenar select de cuentas PUC
-          const selectPuc = document.getElementById("cuentaPuc");
+          // Llenar datalist de cuentas PUC (Estructura de Combobox libre)
+          const datalistPuc = document.getElementById("listaPuc");
+          datalistPuc.innerHTML = "";
           res.data.puc.forEach(codigo => {
             let opt = document.createElement("option");
-            opt.value = codigo; opt.textContent = codigo;
-            selectPuc.appendChild(opt);
+            opt.value = codigo;
+            datalistPuc.appendChild(opt);
           });
           
           // Almacenar y renderizar el datalist global de productos
@@ -487,7 +487,7 @@
         descripcion: textoDigitado,
         cantidad: cant,
         valorUnitario: valUnit,
-        unidadMedida: row.querySelector(".item-unid").value, // CORREGIDO: Mapeado a 'unidadMedida' para emparejar con CompraService.gs
+        unidadMedida: row.querySelector(".item-unid").value, // Mapeado a 'unidadMedida' para emparejar con CompraService.gs
         ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
         ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
         otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
